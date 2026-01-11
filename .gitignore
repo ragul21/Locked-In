@@ -1,0 +1,10 @@
+# node
+node_modules/
+.env
+
+# next
+.next/
+dist/
+
+# misc
+.DS_Store
