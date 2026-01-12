@@ -1,6 +1,27 @@
+"use client";
+import { useState, useEffect } from "react";
+
 import ProfileNavbar from "@/components/ProfileNavbar";
 
 export default function Profile() {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const fetchUser = async () => {
+      const response = await fetch(
+        "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286"
+      );
+
+      const data = await response.json();
+      setUser(data);
+    };
+
+    fetchUser();
+  }, []);
+
+  if (!user) {
+    return <p className="text-center mt-10">Loading profile...</p>;
+  }
+
   return (
     <>
       <ProfileNavbar />
@@ -13,14 +34,16 @@ export default function Profile() {
                 {/* profile photo later */}
               </div>
 
-              <h2 className="text-2xl font-bold">User Name</h2>
-              <p className="text-sm text-black/60">Joined January 2024</p>
+              <h2 className="text-2xl font-bold">{user.firstName}</h2>
+              <p className="text-sm text-black/60">
+                Joined {new Date(user.createdAt).toLocaleDateString()}
+              </p>
             </div>
             <hr className="my-8" />
             <div className="space-y-6">
               <div>
                 <p className="text-xs uppercase text-black/50 mb-1">Email</p>
-                <p className="font-medium">user@email.com</p>
+                <p className="font-medium">{user.email}</p>
               </div>
 
               <div>
@@ -43,10 +66,6 @@ export default function Profile() {
             <div className="flex gap-4 mt-10">
               <button className="flex-1 border py-2 cursor-pointer hover:bg-black/5">
                 Edit Profile
-              </button>
-
-              <button className="flex-1 bg-black text-white py-2 cursor-pointer hover:bg-black/80">
-                Go to Settings
               </button>
             </div>
           </div>

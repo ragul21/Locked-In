@@ -4,6 +4,13 @@ import { useState } from "react";
 
 export default function DashboardNavbar({ onCreateClick }) {
   const [accountOpen, setAccountOpen] = useState(false);
+  function handleLogOut() {
+    window.location.href = "/";
+  }
+
+  function HandleProfile() {
+    window.location.href = "/profile";
+  }
 
   return (
     <nav className="border-b h-16">
@@ -47,11 +54,17 @@ export default function DashboardNavbar({ onCreateClick }) {
                 />
 
                 <div className="absolute right-0 top-12 w-40 border bg-white z-20 shadow">
-                  <button className="w-full text-left px-4 py-2 hover:bg-black/5 cursor-pointer">
+                  <button
+                    onClick={HandleProfile}
+                    className="w-full text-left px-4 py-2 hover:bg-black/5 cursor-pointer"
+                  >
                     Profile
                   </button>
 
-                  <button className="w-full text-left px-4 py-2 text-red-600 hover:bg-black/5 cursor-pointer">
+                  <button
+                    onClick={handleLogOut}
+                    className="w-full text-left px-4 py-2 text-red-600 hover:bg-black/5 cursor-pointer"
+                  >
                     Logout
                   </button>
                 </div>

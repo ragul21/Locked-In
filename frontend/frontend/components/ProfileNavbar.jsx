@@ -3,6 +3,9 @@
 import { useState } from "react";
 
 export default function DashboardNavbar() {
+  function handleBack() {
+    window.location.href = "/dashboard";
+  }
   return (
     <nav className="border-b h-16">
       <div className="container mx-auto h-full px-4">
@@ -18,7 +21,10 @@ export default function DashboardNavbar() {
           </div>
 
           <div>
-            <button className="text-2xl font-semibold cursor-pointer">
+            <button
+              onClick={handleBack}
+              className="text-2xl font-semibold cursor-pointer"
+            >
               Back
             </button>
           </div>
