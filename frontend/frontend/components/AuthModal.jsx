@@ -5,7 +5,16 @@ export default function AuthModal({ mode, onClose }) {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const handleCreateAccount = async () => {
+    if (!firstName || !email || !password) {
+      setError("please fill all the fields");
+      {
+        /* modal input validation with state to render the inline error */
+      }
+      return;
+    }
+    setError("");
     await fetch("http://localhost:4000/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -34,19 +43,16 @@ export default function AuthModal({ mode, onClose }) {
             &times;
           </button>
         </div>
-
         {/* Title */}
         <h2 className="text-2xl font-bold mb-2">
           {mode === "login" ? "Welcome back" : "Create your account"}
         </h2>
-
         {/* Subtitle */}
         <p className="text-black/60 mb-6">
           {mode === "login"
             ? "Sign in to your account to continue"
             : "Start your first session in minutes"}
         </p>
-
         <div className="space-y-4">
           {mode === "signup" && (
             <div>
@@ -93,7 +99,8 @@ export default function AuthModal({ mode, onClose }) {
             />
           </div>
         </div>
-
+        {error && <p className="text-red-600 text-sm mt - 2 ">{error}</p>}{" "}
+        {/* conditional rendering for inline error */}
         {/* Action button */}
         <button
           onClick={handleCreateAccount}
