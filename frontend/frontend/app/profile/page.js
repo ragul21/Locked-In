@@ -5,10 +5,12 @@ import ProfileNavbar from "@/components/ProfileNavbar";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
+  const [isEditMode, setEditMode] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
   useEffect(() => {
     const fetchUser = async () => {
       const response = await fetch(
-        "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286"
+        "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286" // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
       );
 
       const data = await response.json();
@@ -17,6 +19,36 @@ export default function Profile() {
 
     fetchUser();
   }, []);
+
+  const handleDelete = async () => {
+    await fetch(
+      "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286",
+      {
+        method: "DELETE",
+      }
+    );
+
+    alert("user deleted");
+
+    window.location.href = "/";
+  };
+
+  const handlesave = async () => {
+    const response = await fetch(
+      "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: editFirstName,
+        }),
+      }
+    );
+
+    const updateduser = await response.json();
+    setUser(updateduser);
+    setEditMode(false);
+  };
 
   if (!user) {
     return <p className="text-center mt-10">Loading profile...</p>;
@@ -34,7 +66,16 @@ export default function Profile() {
                 {/* profile photo later */}
               </div>
 
-              <h2 className="text-2xl font-bold">{user.firstName}</h2>
+              {isEditMode ? (
+                <input
+                  className="text-2xl font-bold border px-2 py-1"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                />
+              ) : (
+                <h2 className="text-2xl font-bold">{user.firstName}</h2>
+              )}
+
               <p className="text-sm text-black/60">
                 Joined {new Date(user.createdAt).toLocaleDateString()}
               </p>
@@ -62,11 +103,48 @@ export default function Profile() {
                   Active
                 </p>
               </div>
+              <div>
+                <button
+                  onClick={handleDelete}
+                  className="text-2xl font-extrabold text-red-600 cursor-pointer"
+                >
+                  {" "}
+                  Delete Account{" "}
+                </button>
+              </div>
             </div>
+
             <div className="flex gap-4 mt-10">
-              <button className="flex-1 border py-2 cursor-pointer hover:bg-black/5">
-                Edit Profile
-              </button>
+              {!isEditMode ? (
+                <button
+                  onClick={() => {
+                    setEditFirstName(user.firstName); // copy backend value into temp state
+                    setEditMode(true);
+                  }}
+                  className="flex-1 border py-2 cursor-pointer hover:bg-black/5"
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handlesave}
+                    className="flex-1 bg-black text-white py-2"
+                  >
+                    Save
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setEditMode(false); // exit edit mode
+                      setEditFirstName(user.firstName); // discard edits
+                    }}
+                    className="flex-1 border py-2 hover:bg-black/5"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

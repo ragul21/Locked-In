@@ -19,3 +19,25 @@ export const getUserByIDService = async (id) => {
 
   return user;
 };
+
+export const updateUserByIdService = async (id, data) => {
+  const { firstName } = data; // take value of first name from data variable and store it in firstname
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: { firstName }, // data : {} means change the column name firstname to value in the firstname
+    select: {
+      id: true,
+      firstName: true,
+      email: true,
+      createdAt: true,
+    },
+  });
+
+  return updatedUser;
+};
+
+export const deleteByIdService = async (id) => {
+  await prisma.user.delete({
+    where: { id },
+  });
+};
