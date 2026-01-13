@@ -7,10 +7,26 @@ export default function Profile() {
   const [user, setUser] = useState(null);
   const [isEditMode, setEditMode] = useState(false);
   const [editFirstName, setEditFirstName] = useState("");
+
+  /*----------------------------------------------------------------------------------------------------------------- */
+
   useEffect(() => {
     const fetchUser = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        window.location.href = "/";
+        {
+          /* prevent user from accessing the page directly*/
+        }
+        return;
+      }
+
       const response = await fetch(
-        "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286" // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
+        "http://localhost:4000/users/me", // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       const data = await response.json();
@@ -20,40 +36,45 @@ export default function Profile() {
     fetchUser();
   }, []);
 
+  //------------------------------------------------------------------------------------//
+
   const handleDelete = async () => {
-    await fetch(
-      "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286",
-      {
-        method: "DELETE",
-      }
-    );
+    const token = localStorage.getItem("token");
+    await fetch("http://localhost:4000/users/me", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     alert("user deleted");
 
     window.location.href = "/";
   };
 
+  //------------------------------------------------------------------------------------//
+
   const handlesave = async () => {
-    const response = await fetch(
-      "http://localhost:4000/users/59030e4a-bee6-4cae-b4ef-30f60abee286",
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: editFirstName,
-        }),
-      }
-    );
+    const token = localStorage.getItem("token");
+    const response = await fetch("http://localhost:4000/users/me", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        firstName: editFirstName,
+      }),
+    });
 
     const updateduser = await response.json();
     setUser(updateduser);
     setEditMode(false);
   };
 
+  //--------------------------------//
   if (!user) {
     return <p className="text-center mt-10">Loading profile...</p>;
   }
-
+  //----------------render-----------------------------------//
   return (
     <>
       <ProfileNavbar />

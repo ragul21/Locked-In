@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import MyRoomCard from "@/components/MyRoomCard";
 import CreateRoomModal from "@/components/CreateRoomModal";
 
 export default function DashboardPage() {
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      {
+        /* if client does not have token redirect them to landing page ,
+                                                         prevents users from accessing the dashboard page straight from url without logging in  */
+      }
+      window.location.href = "/";
+    }
+  }, []);
 
   const myRoom = {
     name: "Design Sprint",

@@ -5,7 +5,7 @@ import { deleteByIdService } from "../services/users.service.js";
 /////// get all rest api ////////////
 
 export const getUserByID = async (req, res) => {
-  const id = req.params.id;
+  const id = req.user.userId;
 
   try {
     const user = await getUserByIDService(id);
@@ -18,7 +18,7 @@ export const getUserByID = async (req, res) => {
 /////// update rest api ///////////////
 
 export const updateUserById = async (req, res) => {
-  const id = req.params.id;
+  const id = req.user.userId;
 
   const result = userUpdateSchema.safeParse(req.body);
 
@@ -37,7 +37,7 @@ export const updateUserById = async (req, res) => {
 };
 
 export const deleteUserById = async (req, res) => {
-  const id = req.params.id;
+  const id = req.user.userId;
 
   try {
     await deleteByIdService(id);

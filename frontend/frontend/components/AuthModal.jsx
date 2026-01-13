@@ -22,12 +22,13 @@ export default function AuthModal({ mode, onClose }) {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json(); // getting the body out of response , which might be still streaming from source so i used await here
+
       if (!response.ok) {
-        const data = await response.json();
         setError(data.message);
         return;
       }
-
+      localStorage.setItem("token", data.token);
       onClose();
       window.location.href = "/dashboard";
       return;
@@ -70,11 +71,12 @@ export default function AuthModal({ mode, onClose }) {
         password,
       }),
     });
+    const date = await response.json(); // this will take time as we have to read the stream and wait till we get all the chunks of text
     if (response.ok == false) {
-      const date = await response.json(); // this will take time as we have to read the stream and wait till we get all the chunks of text
       setError(date.message); // fetch returns us the promise object with meta date fast but body will be still streaming from the source or buffered , this is how its designed
       return;
     }
+    localStorage.setItem("token", data.token);
     onClose();
     window.location.href = "/dashboard";
   };

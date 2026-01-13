@@ -2,6 +2,7 @@ import { createUser } from "../services/auth.service.js";
 import { signUpSchema } from "../validators/authvalidator.js";
 import { signInSchema } from "../validators/authvalidator.js";
 import { signInUserService } from "../services/auth.service.js";
+
 export const signup = async (req, res) => {
   const result = signUpSchema.safeParse(req.body);
 
