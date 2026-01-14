@@ -5,6 +5,7 @@ import { useState } from "react";
 export default function DashboardNavbar({ onCreateClick }) {
   const [accountOpen, setAccountOpen] = useState(false);
   function handleLogOut() {
+    localStorage.removeItem("token");
     window.location.href = "/";
   }
 

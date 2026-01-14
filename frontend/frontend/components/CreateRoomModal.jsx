@@ -1,6 +1,17 @@
 "use client";
+import { useState } from "react";
+export default function CreateRoomModal({ onClose, onCreate }) {
+  {
+    /*----------------------state to remember the data typed in modal---------------------------------------  */
+  }
 
-export default function CreateRoomModal({ onClose }) {
+  const [roomName, setRoomName] = useState("");
+  const [roomDescription, setRoomDescription] = useState("");
+
+  {
+    /*----------------------UI RENDERING---------------------------------------  */
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 cursor-pointer"
@@ -21,12 +32,25 @@ export default function CreateRoomModal({ onClose }) {
         </div>
 
         <div className="space-y-4">
-          <input className="w-full border px-3 py-2" placeholder="Room name" />
+          {/*----------------------dynamically remember the input values using onchange eventobject and re render the UI for every key stroke ---------------------------------------  */}
+
+          <input
+            className="w-full border px-3 py-2"
+            placeholder="Room name"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+          />
+          {/*without value and on change we cant make react remember what the input value is and showing  whats in the memory dynamically in input fields*/}
           <textarea
             className="w-full border px-3 py-2"
             rows={3}
             placeholder="Room description"
+            value={roomDescription}
+            onChange={(e) => setRoomDescription(e.target.value)}
           />
+
+          {/*-------------------------------------------------------------------------------------------------------  */}
+
           <input type="datetime-local" className="w-full border px-3 py-2" />
           <input type="datetime-local" className="w-full border px-3 py-2" />
           <input
@@ -45,7 +69,22 @@ export default function CreateRoomModal({ onClose }) {
           >
             Cancel
           </button>
-          <button className="bg-black text-white px-4 py-2 cursor-pointer hover:bg-black/85 transition">
+          <button
+            onClick={() => {
+              if (!roomName || !roomDescription) {
+                alert("please fill all the details ");
+                return;
+              }
+
+              const roomData = {
+                id: "room-" + Math.random().toString().slice(2),
+                name: roomName,
+                description: roomDescription,
+              };
+              onCreate(roomData);
+            }}
+            className="bg-black text-white px-4 py-2 cursor-pointer hover:bg-black/85 transition"
+          >
             Create
           </button>
         </div>

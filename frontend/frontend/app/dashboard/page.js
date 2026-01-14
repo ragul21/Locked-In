@@ -98,7 +98,15 @@ export default function DashboardPage() {
       </main>
 
       {isCreateRoomOpen && (
-        <CreateRoomModal onClose={() => setIsCreateRoomOpen(false)} />
+        <CreateRoomModal
+          onClose={() => setIsCreateRoomOpen(false)}
+          onCreate={(room) => {
+            setIsCreateRoomOpen(false); //create room data is passed as query parameters by safely encoding it
+            window.location.href = `/room/${room.id}?name=${encodeURIComponent(
+              room.name
+            )}&desc=${encodeURIComponent(room.description)}`;
+          }}
+        />
       )}
     </>
   );

@@ -2,7 +2,7 @@ import { createUser } from "../services/auth.service.js";
 import { signUpSchema } from "../validators/authvalidator.js";
 import { signInSchema } from "../validators/authvalidator.js";
 import { signInUserService } from "../services/auth.service.js";
-
+import { signUpUserService } from "../services/auth.service.js";
 export const signup = async (req, res) => {
   const result = signUpSchema.safeParse(req.body);
 
@@ -13,7 +13,7 @@ export const signup = async (req, res) => {
   }
 
   try {
-    const user = await createUser(result.data);
+    const user = await signUpUserService(result.data);
     res.json(user);
   } catch (error) {
     res.status(400).json({ message: error.message });

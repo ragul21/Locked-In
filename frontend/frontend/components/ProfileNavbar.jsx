@@ -4,7 +4,6 @@ import { useState } from "react";
 
 export default function DashboardNavbar() {
   function handleBack() {
-    localStorage.removeItem("token");
     window.location.href = "/dashboard";
   }
   return (
