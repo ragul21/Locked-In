@@ -14,6 +14,13 @@ export function initSocket(server) {
     }
     console.log(" Socket connected:", socket.id);
 
+    socket.on("join-room", (roomId) => {
+      //
+      socket.join(roomId);
+      console.log(`${socket.id} joined room ${roomId}`);
+      socket.to(roomId).emit("user-joined", socket.id);
+    });
+
     socket.on("disconnect", () => {
       console.log(" Socket disconnected:", socket.id);
       {
@@ -21,4 +28,15 @@ export function initSocket(server) {
       }
     });
   });
+}
+
+{
+  /* when http server receives the http request with upgrade it emits an upgrade event
+    which is intercepted by socket io object manager that we attached , it then creates
+    a socket object in server end and assigns a socket id and emits connection, then we have listener on this
+    object ("on") which captures it and calls the callback which then registers the listeners on the socket object
+    emit - means fire events 
+    on - means listen to it 
+
+    */
 }

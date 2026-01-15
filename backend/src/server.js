@@ -4,9 +4,9 @@ import { initSocket } from "./socket/index.js";
 
 const PORT = 4000;
 const server = http.createServer(app); //create a http server , if normal request comes in let app router handle
-initSocket(server); // runs during server startup, pass our node js server to socket controller function which creates a socket controller class object and hooks into our actual server so it can listen to web socket request
+initSocket(server); // hooks the socket io object manager to http server so it can intercept upgrade events (socket request to establish a persistent connection)
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`); // we are making the object to listen on this port
 });
 
 // internally this looks something liks  http.createServer(app(req,res))

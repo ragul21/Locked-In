@@ -1,7 +1,8 @@
 "use client";
-
+import { io } from "socket.io-client";
 import { useParams, useSearchParams } from "next/navigation";
 import { MicOff, MessageSquare, Monitor, LogOut } from "lucide-react";
+import { useEffect } from "react";
 
 export default function RoomPage() {
   const searchParams = useSearchParams();
@@ -10,6 +11,29 @@ export default function RoomPage() {
   const roomId = params.roomid;
   const name = searchParams.get("name");
   const description = searchParams.get("desc");
+
+  useEffect(() => {
+    if (!roomId) return;
+    const socket = io("http://localhost:4000"); //calls the backend , creates a client socket object for itself
+
+    socket.on("connect", () => {
+      console.log("FRONTEND connected", socket.id);
+      socket.emit("join-room", roomId);
+    });
+
+    socket.on("disconnect", () => {
+      // we use this socket object to emit (communicate with server ) and listen what server sends us
+      console.log("FRONTEND disconnected");
+    });
+
+    socket.on("user-joined", (id) => {
+      console.log("Someone joined:", id);
+    });
+
+    return () => {
+      socket.disconnect(); //gracefull termination when user exits , we are using this is as a clean up function
+    };
+  }, [roomId]);
 
   //mock data for member page
   const members = [
