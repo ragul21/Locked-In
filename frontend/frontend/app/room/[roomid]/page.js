@@ -2,12 +2,17 @@
 import { io } from "socket.io-client";
 import { useParams, useSearchParams } from "next/navigation";
 import { MicOff, MessageSquare, Monitor, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function RoomPage() {
   const [members, setMember] = useState([]);
   const searchParams = useSearchParams();
   const params = useParams();
+  const socketRef = useRef(null);
+  const [isChatOpen, setIsChatOpen] = useState(false); // to toggle chat box
+
+  const [chatInput, setChatInput] = useState(""); // to remember what user types in the input box
+  const [messages, setMessages] = useState([]); // add what user typed in the box to the list and show the updated list has history
 
   const roomId = params.roomid;
   const name = searchParams.get("name");
@@ -17,7 +22,7 @@ export default function RoomPage() {
   useEffect(() => {
     if (!roomId) return;
     const socket = io("http://localhost:4000"); //calls the backend , creates a client socket object for itself
-
+    socketRef.current = socket; //saving the reference to use this outside of the scope it is now
     socket.on("connect", () => {
       console.log("FRONTEND connected", socket.id);
       socket.emit("join-room", { roomId, username });
@@ -29,14 +34,38 @@ export default function RoomPage() {
     });
 
     socket.on("room-members", (membersFromServer) => {
-      console.log("Members update:", membersFromServer);
+      // when backend sends me the list use state to render UI
+      console.log("Members update:  ", membersFromServer);
       setMember(membersFromServer);
+    });
+
+    socket.on("chat-history", (history) => {
+      setMessages(history);
+    });
+
+    socket.on("chat-message", (message) => {
+      setMessages((prev) => [...prev, message]);
     });
 
     return () => {
       socket.disconnect(); //gracefull termination when user exits , we are using this is as a clean up function
     };
-  }, [roomId]);
+  }, [roomId]); //whenever the roomID changes run this effect
+
+  //----------------------------- when user clicks send we send this message to server using socket emit -------------------//
+  const sendMessage = () => {
+    if (!chatInput.trim()) return;
+
+    socketRef.current.emit("chat-message", {
+      roomId,
+      username,
+      text: chatInput,
+    });
+
+    setChatInput("");
+  };
+
+  //----------------------------- when user clicks send we update the chat history state everytime and render it -------------------//
 
   return (
     <>
@@ -102,11 +131,74 @@ export default function RoomPage() {
                   <Monitor size={22} />
                 </button>
 
-                <button className="border p-4 rounded-lg hover:bg-black/5">
+                <button
+                  onClick={() => setIsChatOpen(true)}
+                  className="border p-4 rounded-lg hover:bg-black/5"
+                >
                   <MessageSquare size={22} />
                 </button>
 
-                <button className="border p-4 rounded-lg hover:bg-black/5 text-red-600">
+                {/* conditional rendering of chat window if someone toggles the chat window */}
+
+                {isChatOpen && (
+                  <div className="fixed bottom-6 right-6 w-80 h-96 border rounded-lg bg-white shadow-lg flex flex-col">
+                    {/* Header */}
+                    <div className="border-b px-4 py-2 font-semibold flex justify-between items-center">
+                      <span>Chat</span>
+                      <button
+                        className="text-black/60 hover:text-black"
+                        onClick={() => setIsChatOpen(false)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="flex-1 p-3 overflow-y-auto space-y-2">
+                      {messages.length === 0 && (
+                        <p className="text-black/40 text-sm">No messages yet</p>
+                      )}
+
+                      {messages.map((msg, index) => (
+                        <div
+                          key={index}
+                          className="bg-black/5 px-3 py-2 rounded text-sm"
+                        >
+                          <span className="font-semibold">{msg.from}: </span>
+                          {msg.text}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Input */}
+                    <div className="border-t p-2 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Type a message..."
+                        className="flex-1 border rounded px-3 py-2 text-sm"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                      />
+                      <button
+                        onClick={sendMessage}
+                        className="bg-black text-white px-3 py-2 rounded text-sm"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* conditional rendering of chat window if someone toggles the chat window */}
+
+                <button
+                  onClick={() => {
+                    if (socketRef.current) {
+                      socketRef.current.disconnect();
+                    }
+                    window.location.href = "/dashboard";
+                  }}
+                  className="border p-4 rounded-lg hover:bg-black/5 text-red-600"
+                >
                   <LogOut size={22} />
                 </button>
               </div>

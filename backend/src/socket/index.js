@@ -22,37 +22,73 @@ export function initSocket(server) {
 
       if (!rooms[roomId]) {
         // application level memory of who joined and there data
-        rooms[roomId] = [];
+        rooms[roomId] = {
+          members: [],
+          messages: [],
+        };
       }
 
-      const isAdmin = rooms[roomId].length === 0; // person creating the room will the admin as he is the first person
+      {
+        /* rooms[roomId] = {
+      members: [ { member }, { member } ],
+      messages: [ { message }, { message } ]
+} */
+      }
 
-      rooms[roomId].push({
+      const isAdmin = rooms[roomId].members.length === 0; // person creating the room will the admin as he is the first person
+
+      rooms[roomId].members.push({
+        //push into memmbers
         id: socket.id,
-        name: username, // now pushing the values in application level memory
+        name: username,
         role: isAdmin ? "admin" : "member",
       });
 
       console.log(`${socket.id} joined room ${roomId}`);
 
-      io.to(roomId).emit("room-members", rooms[roomId]); // to all the socket id in this particular room send the member list
+      io.to(roomId).emit("room-members", rooms[roomId].members); // to all the socket id in this particular room send the member list
+      socket.emit("chat-history", rooms[roomId].messages); //one time display of chat history for new member who joined the room
     });
 
+    {
+      /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
+    }
+
+    socket.on("chat-message", ({ roomId, username, text }) => {
+      console.log("Message received:", text);
+
+      const message = { text, from: username };
+
+      rooms[roomId].messages.push(message);
+
+      io.to(roomId).emit("chat-message", message);
+    });
+
+    {
+      /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
+    }
+
+    {
+      /*-------------------------- disconnect logic ------------------------------- */
+    }
     socket.on("disconnect", () => {
       console.log("Socket disconnected:", socket.id);
 
       for (const roomId in rooms) {
-        const before = rooms[roomId].length;
+        const before = rooms[roomId].members.length;
 
-        rooms[roomId] = rooms[roomId].filter(
+        rooms[roomId].members = rooms[roomId].members.filter(
           (member) => member.id !== socket.id
         );
 
-        if (rooms[roomId].length !== before) {
-          io.to(roomId).emit("room-members", rooms[roomId]);
+        if (rooms[roomId].members.length !== before) {
+          io.to(roomId).emit("room-members", rooms[roomId].members);
         }
       }
     });
+    {
+      /*-------------------------- disconnect logic ------------------------------- */
+    }
   });
 }
 
