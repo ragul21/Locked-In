@@ -14,7 +14,9 @@ export default function RoomPage() {
   const [messages, setMessages] = useState([]); // add what user typed in the box to the list and show the updated list has history
 
   const [shareUrl, setShareUrl] = useState(""); // to render and show the share URL after side effect runs in browser end
-
+  const [isMicOn, setIsMicOn] = useState(false); // for mic state
+  const micStreamRef = useRef(null); // to save the stream object to pass it websockets
+  const localAudioRef = useRef(null); // to store the audio html dom
   const searchParams = useSearchParams();
   const params = useParams();
   const socketRef = useRef(null);
@@ -96,8 +98,49 @@ export default function RoomPage() {
   }
   //----------------------------- when user clicks send we update the chat history state everytime and render it -------------------//
 
+  const toggleMic = async () => {
+    //  Mic is OFF → turn it ON
+    if (!isMicOn) {
+      // Ask browser for microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        // gives me access to live microphone where sound will be flowing continiously
+        audio: true,
+      });
+
+      // Save stream for later use (WebRTC)
+      micStreamRef.current = stream;
+
+      // Enable all audio tracks explicitly as microphone might be turned on we need to switch it on so actually sound can reach the other person
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
+
+      if (localAudioRef.current) {
+        localAudioRef.current.srcObject = stream; // connecting the live stream to audio element so i can hear the sound actually
+      }
+
+      setIsMicOn(true);
+      console.log("Mic ON", stream);
+    }
+    // Case 2: Mic is ON → mute it
+    else {
+      const stream = micStreamRef.current;
+      if (!stream) return;
+
+      stream.getAudioTracks().forEach((track) => {
+        // keeping the mic turned on hardware level but switching it off so sound doesnt travel
+        track.enabled = false; // track is the actual thing where continous sound flows and stream is just a wrapper on it to support multiple source
+      });
+
+      setIsMicOn(false);
+      console.log("Mic OFF");
+    }
+  };
+
   return (
     <>
+      {/* way to access the audio element DOM using jsx , using this element we can listen to the track sound (for testing purpose only) */}
+      <audio ref={localAudioRef} autoPlay />
       <nav className="border-b">
         {/*---------------------------horizontal centering so items dont stretch to extreme ends ----------------------------------*/}
 
@@ -155,7 +198,12 @@ export default function RoomPage() {
               <h3 className="font-semibold mb-4">Controls</h3>
 
               <div className="flex items-center justify-center gap-6">
-                <button className="border p-4 rounded-lg hover:bg-black/5">
+                <button
+                  onClick={toggleMic}
+                  className={`border p-4 rounded-lg hover:bg-black/5 ${
+                    isMicOn ? "bg-black text-white" : ""
+                  }`}
+                >
                   <MicOff size={22} />
                 </button>
 
