@@ -104,7 +104,9 @@ export default function DashboardPage() {
             setIsCreateRoomOpen(false); //create room data is passed as query parameters by safely encoding it
             window.location.href = `/room/${room.id}?name=${encodeURIComponent(
               room.name
-            )}&desc=${encodeURIComponent(room.description)}`;
+            )}&desc=${encodeURIComponent(
+              room.description
+            )}&username=${encodeURIComponent(room.username)}`;
           }}
         />
       )}

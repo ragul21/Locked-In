@@ -2,9 +2,10 @@
 import { io } from "socket.io-client";
 import { useParams, useSearchParams } from "next/navigation";
 import { MicOff, MessageSquare, Monitor, LogOut } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function RoomPage() {
+  const [members, setMember] = useState([]);
   const searchParams = useSearchParams();
   const params = useParams();
 
@@ -34,15 +35,6 @@ export default function RoomPage() {
       socket.disconnect(); //gracefull termination when user exits , we are using this is as a clean up function
     };
   }, [roomId]);
-
-  //mock data for member page
-  const members = [
-    { id: 1, name: "You", role: "admin" },
-    { id: 2, name: "Alice" },
-    { id: 3, name: "Bob" },
-    { id: 4, name: "Charlie" },
-    { id: 5, name: "Diana" },
-  ];
 
   return (
     <>

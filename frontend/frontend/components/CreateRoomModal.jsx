@@ -7,6 +7,7 @@ export default function CreateRoomModal({ onClose, onCreate }) {
 
   const [roomName, setRoomName] = useState("");
   const [roomDescription, setRoomDescription] = useState("");
+  const [userName, setUserName] = useState(""); //to remember the name of person who created the room
 
   {
     /*----------------------UI RENDERING---------------------------------------  */
@@ -33,7 +34,12 @@ export default function CreateRoomModal({ onClose, onCreate }) {
 
         <div className="space-y-4">
           {/*----------------------dynamically remember the input values using onchange eventobject and re render the UI for every key stroke ---------------------------------------  */}
-
+          <input
+            className="w-full border px-3 py-2"
+            placeholder="Your name"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+          />
           <input
             className="w-full border px-3 py-2"
             placeholder="Room name"
@@ -71,7 +77,7 @@ export default function CreateRoomModal({ onClose, onCreate }) {
           </button>
           <button
             onClick={() => {
-              if (!roomName || !roomDescription) {
+              if (!roomName || !roomDescription || !userName) {
                 alert("please fill all the details ");
                 return;
               }
@@ -80,6 +86,7 @@ export default function CreateRoomModal({ onClose, onCreate }) {
                 id: "room-" + Math.random().toString().slice(2),
                 name: roomName,
                 description: roomDescription,
+                username: userName,
               };
               onCreate(roomData);
             }}
