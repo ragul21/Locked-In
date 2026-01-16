@@ -1,5 +1,7 @@
 import { Server } from "socket.io";
 
+const rooms = {};
+
 export function initSocket(server) {
   const io = new Server(server, {
     // socket io manager hooking it self to http server
@@ -14,17 +16,41 @@ export function initSocket(server) {
     }
     console.log(" Socket connected:", socket.id);
 
-    socket.on("join-room", (roomId) => {
+    socket.on("join-room", ({ roomId, username }) => {
       //
-      socket.join(roomId);
+      socket.join(roomId); // internally creates array for that room id and store the socket id
+
+      if (!rooms[roomId]) {
+        // application level memory of who joined and there data
+        rooms[roomId] = [];
+      }
+
+      const isAdmin = rooms[roomId].length === 0; // person creating the room will the admin as he is the first person
+
+      rooms[roomId].push({
+        id: socket.id,
+        name: username, // now pushing the values in application level memory
+        role: isAdmin ? "admin" : "member",
+      });
+
       console.log(`${socket.id} joined room ${roomId}`);
-      socket.to(roomId).emit("user-joined", socket.id);
+
+      io.to(roomId).emit("room-members", rooms[roomId]); // to all the socket id in this particular room send the member list
     });
 
     socket.on("disconnect", () => {
-      console.log(" Socket disconnected:", socket.id);
-      {
-        /* “When Socket.IO emits a disconnect event for this socket, run this.” */
+      console.log("Socket disconnected:", socket.id);
+
+      for (const roomId in rooms) {
+        const before = rooms[roomId].length;
+
+        rooms[roomId] = rooms[roomId].filter(
+          (member) => member.id !== socket.id
+        );
+
+        if (rooms[roomId].length !== before) {
+          io.to(roomId).emit("room-members", rooms[roomId]);
+        }
       }
     });
   });

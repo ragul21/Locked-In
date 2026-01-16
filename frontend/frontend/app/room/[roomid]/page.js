@@ -12,6 +12,7 @@ export default function RoomPage() {
   const roomId = params.roomid;
   const name = searchParams.get("name");
   const description = searchParams.get("desc");
+  const username = searchParams.get("username");
 
   useEffect(() => {
     if (!roomId) return;
@@ -19,7 +20,7 @@ export default function RoomPage() {
 
     socket.on("connect", () => {
       console.log("FRONTEND connected", socket.id);
-      socket.emit("join-room", roomId);
+      socket.emit("join-room", { roomId, username });
     });
 
     socket.on("disconnect", () => {
@@ -27,8 +28,9 @@ export default function RoomPage() {
       console.log("FRONTEND disconnected");
     });
 
-    socket.on("user-joined", (id) => {
-      console.log("Someone joined:", id);
+    socket.on("room-members", (membersFromServer) => {
+      console.log("Members update:", membersFromServer);
+      setMember(membersFromServer);
     });
 
     return () => {
