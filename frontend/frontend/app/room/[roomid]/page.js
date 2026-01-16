@@ -3,24 +3,49 @@ import { io } from "socket.io-client";
 import { useParams, useSearchParams } from "next/navigation";
 import { MicOff, MessageSquare, Monitor, LogOut } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-
+import EnterNameModal from "@/components/EnterNameModal";
 export default function RoomPage() {
+  const [username, setUsername] = useState(null);
   const [members, setMember] = useState([]);
-  const searchParams = useSearchParams();
-  const params = useParams();
-  const socketRef = useRef(null);
+
   const [isChatOpen, setIsChatOpen] = useState(false); // to toggle chat box
 
   const [chatInput, setChatInput] = useState(""); // to remember what user types in the input box
   const [messages, setMessages] = useState([]); // add what user typed in the box to the list and show the updated list has history
 
+  const [shareUrl, setShareUrl] = useState(""); // to render and show the share URL after side effect runs in browser end
+
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const socketRef = useRef(null);
+
+  {
+    /* ------------------------------url date extraction -------------------*/
+  }
   const roomId = params.roomid;
   const name = searchParams.get("name");
   const description = searchParams.get("desc");
-  const username = searchParams.get("username");
+  const usernameFromUrl = searchParams.get("username");
+
+  {
+    /* ------------------------------url date extraction -------------------*/
+  }
 
   useEffect(() => {
-    if (!roomId) return;
+    if (usernameFromUrl && !username) {
+      setUsername(usernameFromUrl);
+    }
+  }, [usernameFromUrl, username]);
+
+  useEffect(() => {
+    if (!roomId || !username) return;
+
+    setShareUrl(
+      `${window.location.origin}/room/${roomId}?name=${encodeURIComponent(
+        name || ""
+      )}&desc=${encodeURIComponent(description || "")}`
+    ); //while running in browser build share url
+
     const socket = io("http://localhost:4000"); //calls the backend , creates a client socket object for itself
     socketRef.current = socket; //saving the reference to use this outside of the scope it is now
     socket.on("connect", () => {
@@ -50,7 +75,7 @@ export default function RoomPage() {
     return () => {
       socket.disconnect(); //gracefull termination when user exits , we are using this is as a clean up function
     };
-  }, [roomId]); //whenever the roomID changes run this effect
+  }, [roomId, username]); //whenever the roomID changes run this effect
 
   //----------------------------- when user clicks send we send this message to server using socket emit -------------------//
   const sendMessage = () => {
@@ -65,6 +90,9 @@ export default function RoomPage() {
     setChatInput("");
   };
 
+  if (!username) {
+    return <EnterNameModal onSubmit={setUsername} />;
+  }
   //----------------------------- when user clicks send we update the chat history state everytime and render it -------------------//
 
   return (
@@ -110,10 +138,13 @@ export default function RoomPage() {
                 <input
                   type="text"
                   readOnly
-                  value="https://example.com/join/room-xyz"
+                  value={shareUrl}
                   className="flex-1 border rounded px-3 py-2 text-sm bg-black/5"
                 />
-                <button className="border rounded px-3 py-2 text-sm hover:bg-black/5">
+                <button
+                  onClick={() => navigator.clipboard.writeText(shareUrl)}
+                  className="border rounded px-3 py-2 text-sm hover:bg-black/5"
+                >
                   Copy
                 </button>
               </div>
