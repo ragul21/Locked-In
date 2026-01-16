@@ -25,17 +25,18 @@ export default function RoomPage() {
   const roomId = params.roomid;
   const name = searchParams.get("name");
   const description = searchParams.get("desc");
-  const usernameFromUrl = searchParams.get("username");
 
   {
     /* ------------------------------url date extraction -------------------*/
   }
 
   useEffect(() => {
-    if (usernameFromUrl && !username) {
-      setUsername(usernameFromUrl);
+    const storedUsername = sessionStorage.getItem("username");
+
+    if (storedUsername && !username) {
+      setUsername(storedUsername);
     }
-  }, [usernameFromUrl, username]);
+  }, [username]);
 
   useEffect(() => {
     if (!roomId || !username) return;
@@ -91,7 +92,7 @@ export default function RoomPage() {
   };
 
   if (!username) {
-    return <EnterNameModal onSubmit={setUsername} />;
+    return <EnterNameModal onSubmit={setUsername} />; // Through joining link users wont have name , so we force a modal for them to enter
   }
   //----------------------------- when user clicks send we update the chat history state everytime and render it -------------------//
 

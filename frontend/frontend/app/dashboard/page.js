@@ -102,11 +102,11 @@ export default function DashboardPage() {
           onClose={() => setIsCreateRoomOpen(false)}
           onCreate={(room) => {
             setIsCreateRoomOpen(false); //create room data is passed as query parameters by safely encoding it
+            sessionStorage.setItem("username", room.username);
+
             window.location.href = `/room/${room.id}?name=${encodeURIComponent(
               room.name
-            )}&desc=${encodeURIComponent(
-              room.description
-            )}&username=${encodeURIComponent(room.username)}`;
+            )}&desc=${encodeURIComponent(room.description)}`;
           }}
         />
       )}
