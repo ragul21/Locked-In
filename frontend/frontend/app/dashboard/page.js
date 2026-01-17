@@ -105,8 +105,8 @@ export default function DashboardPage() {
             sessionStorage.setItem("username", room.username);
 
             window.location.href = `/room/${room.id}?name=${encodeURIComponent(
-              room.name
-            )}&desc=${encodeURIComponent(room.description)}`;
+              room.name,
+            )}&desc=${encodeURIComponent(room.description)}&end=${encodeURIComponent(room.endTime)}`;
           }}
         />
       )}

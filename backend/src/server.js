@@ -6,7 +6,7 @@ const PORT = 4000;
 const server = http.createServer(app); //create a http server , if normal request comes in let app router handle
 initSocket(server); // hooks the socket io object manager to http server so it can intercept upgrade events (socket request to establish a persistent connection)
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`); // we are making the object to listen on this port
+  console.log(`Server running on http://localhost:${PORT}`);
 });
 
 // internally this looks something liks  http.createServer(app(req,res))

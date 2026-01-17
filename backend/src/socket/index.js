@@ -16,7 +16,7 @@ export function initSocket(server) {
     }
     console.log(" Socket connected:", socket.id);
 
-    socket.on("join-room", ({ roomId, username }) => {
+    socket.on("join-room", ({ roomId, username, endTime }) => {
       //
       socket.join(roomId); // internally creates array for that room id and store the socket id
 
@@ -25,6 +25,9 @@ export function initSocket(server) {
         rooms[roomId] = {
           members: [],
           messages: [],
+          startTime: null,
+          endTime: null,
+          status: "ACTIVE",
         };
       }
 
@@ -37,11 +40,30 @@ export function initSocket(server) {
 
       const isAdmin = rooms[roomId].members.length === 0; // person creating the room will the admin as he is the first person
 
+      if (isAdmin && !rooms[roomId].startTime && endTime) {
+        // after end time emit all members room ended
+        rooms[roomId].startTime = Date.now();
+        rooms[roomId].endTime = endTime;
+
+        const delay = endTime - Date.now();
+
+        setTimeout(() => {
+          if (rooms[roomId]?.status === "ACTIVE") {
+            rooms[roomId].status = "ENDED";
+            io.to(roomId).emit("room-ended");
+          }
+        }, delay);
+      }
+
       rooms[roomId].members.push({
         //push into memmbers
         id: socket.id,
         name: username,
         role: isAdmin ? "admin" : "member",
+      });
+
+      socket.emit("room-time", {
+        endTime: rooms[roomId].endTime,
       });
 
       console.log(`${socket.id} joined room ${roomId}`);
@@ -68,6 +90,36 @@ export function initSocket(server) {
       /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
     }
 
+    //-----------when someone sends a webrtc offer send this offer to other people in the room-------------------//
+
+    socket.on("webrtc-offer", ({ roomId, offer }) => {
+      //socket.to(emit) - except me send to other
+      //io.to(emit) - send to everyone including me
+      socket.to(roomId).emit("webrtc-offer", {
+        from: socket.id,
+        offer,
+      });
+    });
+
+    //----------------------replying to the answer , send this to client who sent the offer --------------------------------------------//
+
+    socket.on("webrtc-answer", ({ to, answer }) => {
+      // Send answer ONLY to the original offerer
+      io.to(to).emit("webrtc-answer", {
+        from: socket.id,
+        answer,
+      });
+    });
+
+    //--------------------- handling the ice candidates received from the clients and forwarding it to others except the sender---------------------------------------------//
+
+    socket.on("webrtc-ice-candidate", ({ roomId, candidate }) => {
+      socket.to(roomId).emit("webrtc-ice-candidate", {
+        from: socket.id,
+        candidate,
+      });
+    });
+
     {
       /*-------------------------- disconnect logic ------------------------------- */
     }
@@ -78,7 +130,7 @@ export function initSocket(server) {
         const before = rooms[roomId].members.length;
 
         rooms[roomId].members = rooms[roomId].members.filter(
-          (member) => member.id !== socket.id
+          (member) => member.id !== socket.id,
         );
 
         if (rooms[roomId].members.length !== before) {

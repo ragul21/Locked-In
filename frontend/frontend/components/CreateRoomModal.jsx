@@ -8,7 +8,7 @@ export default function CreateRoomModal({ onClose, onCreate }) {
   const [roomName, setRoomName] = useState("");
   const [roomDescription, setRoomDescription] = useState("");
   const [userName, setUserName] = useState(""); //to remember the name of person who created the room
-
+  const [endTime, setEndTime] = useState(""); // to pass the endtime to backend server for room timing calculations
   {
     /*----------------------UI RENDERING---------------------------------------  */
   }
@@ -58,7 +58,13 @@ export default function CreateRoomModal({ onClose, onCreate }) {
           {/*-------------------------------------------------------------------------------------------------------  */}
 
           <input type="datetime-local" className="w-full border px-3 py-2" />
-          <input type="datetime-local" className="w-full border px-3 py-2" />
+          <input
+            type="datetime-local"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full border px-3 py-2"
+          />
+
           <input
             type="number"
             min={1}
@@ -87,6 +93,7 @@ export default function CreateRoomModal({ onClose, onCreate }) {
                 name: roomName,
                 description: roomDescription,
                 username: userName,
+                endTime,
               };
               onCreate(roomData);
             }}

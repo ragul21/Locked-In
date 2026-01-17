@@ -4,33 +4,62 @@ import { useParams, useSearchParams } from "next/navigation";
 import { MicOff, MessageSquare, Monitor, LogOut } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import EnterNameModal from "@/components/EnterNameModal";
+import { useRouter } from "next/navigation";
 export default function RoomPage() {
+  const router = useRouter(); // to push submission page after timer ends
   const [username, setUsername] = useState(null);
   const [members, setMember] = useState([]);
+  const [endTime, setEndTime] = useState(null);
+  const [timeLeft, setTimeLeft] = useState("--:--");
 
   const [isChatOpen, setIsChatOpen] = useState(false); // to toggle chat box
-
   const [chatInput, setChatInput] = useState(""); // to remember what user types in the input box
   const [messages, setMessages] = useState([]); // add what user typed in the box to the list and show the updated list has history
 
   const [shareUrl, setShareUrl] = useState(""); // to render and show the share URL after side effect runs in browser end
   const [isMicOn, setIsMicOn] = useState(false); // for mic state
+
   const micStreamRef = useRef(null); // to save the stream object to pass it websockets
-  const localAudioRef = useRef(null); // to store the audio html dom
+  const peerConnectionRef = useRef(null); // to store the reference of RTCpeerconnection object
+  const socketRef = useRef(null);
+  const remoteAudioRef = useRef(null); // to hear other person voice
+
   const searchParams = useSearchParams();
   const params = useParams();
-  const socketRef = useRef(null);
 
-  {
-    /* ------------------------------url date extraction -------------------*/
-  }
+  /* ------------------------------url data extraction -------------------*/
   const roomId = params.roomid;
   const name = searchParams.get("name");
   const description = searchParams.get("desc");
+  const endTimeParam = searchParams.get("end");
+  /* -----------------------------time countdown in room -------------------*/
 
-  {
-    /* ------------------------------url date extraction -------------------*/
-  }
+  const endTimeFromModal = endTimeParam
+    ? new Date(endTimeParam).getTime() // convert the data into milliseconds (js understands miliseconds)
+    : null;
+
+  useEffect(() => {
+    if (!endTime) return;
+
+    const interval = setInterval(() => {
+      const diff = endTime - Date.now();
+
+      if (diff <= 0) {
+        setTimeLeft("00:00");
+        clearInterval(interval);
+        return;
+      }
+
+      const minutes = Math.floor(diff / 60000); // millisecond to minutes calculation
+      const seconds = Math.floor((diff % 60000) / 1000); // millisecond to minutes calculation
+
+      setTimeLeft(
+        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
+      );
+    }, 1000); //every second update the UI countdown
+
+    return () => clearInterval(interval);
+  }, [endTime]);
 
   useEffect(() => {
     const storedUsername = sessionStorage.getItem("username");
@@ -45,25 +74,59 @@ export default function RoomPage() {
 
     setShareUrl(
       `${window.location.origin}/room/${roomId}?name=${encodeURIComponent(
-        name || ""
-      )}&desc=${encodeURIComponent(description || "")}`
-    ); //while running in browser build share url
+        name || "",
+      )}&desc=${encodeURIComponent(description || "")}`,
+    );
 
-    const socket = io("http://localhost:4000"); //calls the backend , creates a client socket object for itself
-    socketRef.current = socket; //saving the reference to use this outside of the scope it is now
+    const socket = io("http://localhost:4000");
+    socketRef.current = socket;
+
     socket.on("connect", () => {
       console.log("FRONTEND connected", socket.id);
-      socket.emit("join-room", { roomId, username });
+      socket.emit("join-room", { roomId, username, endTime: endTimeFromModal });
+
+      socket.on("room-time", ({ endTime }) => {
+        setEndTime(endTime);
+      });
+
+      //  CREATE PEER CONNECTION ONCE
+      if (!peerConnectionRef.current) {
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
+
+        peerConnectionRef.current = pc;
+
+        //  play remote audio
+        pc.ontrack = (event) => {
+          console.log("Remote audio received");
+          remoteAudioRef.current.srcObject = event.streams[0];
+        };
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit("webrtc-ice-candidate", {
+              roomId,
+              candidate: event.candidate,
+            });
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          console.log("PC STATE :", pc.connectionState);
+        };
+      }
+    });
+    // after room ends push this
+    socket.on("room-ended", () => {
+      router.push(`/room/${roomId}/submit`);
     });
 
     socket.on("disconnect", () => {
-      // we use this socket object to emit (communicate with server ) and listen what server sends us
       console.log("FRONTEND disconnected");
     });
 
     socket.on("room-members", (membersFromServer) => {
-      // when backend sends me the list use state to render UI
-      console.log("Members update:  ", membersFromServer);
       setMember(membersFromServer);
     });
 
@@ -75,12 +138,66 @@ export default function RoomPage() {
       setMessages((prev) => [...prev, message]);
     });
 
-    return () => {
-      socket.disconnect(); //gracefull termination when user exits , we are using this is as a clean up function
-    };
-  }, [roomId, username]); //whenever the roomID changes run this effect
+    socket.on("webrtc-offer", async ({ from, offer }) => {
+      console.log("Received offer");
+      const pc = peerConnectionRef.current;
 
-  //----------------------------- when user clicks send we send this message to server using socket emit -------------------//
+      await pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit("webrtc-answer", {
+        to: from,
+        answer,
+      });
+    });
+
+    socket.on("webrtc-answer", async ({ answer }) => {
+      await peerConnectionRef.current.setRemoteDescription(answer);
+      console.log("Answer applied");
+    });
+
+    socket.on("webrtc-ice-candidate", async ({ candidate }) => {
+      await peerConnectionRef.current.addIceCandidate(candidate);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [roomId, username]);
+
+  //-----------------------------------------mic on/off ---------------------------///
+  const toggleMic = async () => {
+    const pc = peerConnectionRef.current;
+
+    // Mic OFF → ON
+    if (!isMicOn) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socketRef.current.emit("webrtc-offer", {
+        roomId,
+        offer,
+      });
+
+      setIsMicOn(true);
+    }
+    // Mic ON → OFF (stop sending only)
+    else {
+      micStreamRef.current.getTracks().forEach((track) => track.stop());
+      micStreamRef.current = null;
+      setIsMicOn(false);
+    }
+  };
+
+  //----------------------------- send chat -------------------//
   const sendMessage = () => {
     if (!chatInput.trim()) return;
 
@@ -94,53 +211,15 @@ export default function RoomPage() {
   };
 
   if (!username) {
-    return <EnterNameModal onSubmit={setUsername} />; // Through joining link users wont have name , so we force a modal for them to enter
+    return <EnterNameModal onSubmit={setUsername} />;
   }
-  //----------------------------- when user clicks send we update the chat history state everytime and render it -------------------//
 
-  const toggleMic = async () => {
-    //  Mic is OFF → turn it ON
-    if (!isMicOn) {
-      // Ask browser for microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        // gives me access to live microphone where sound will be flowing continiously
-        audio: true,
-      });
-
-      // Save stream for later use (WebRTC)
-      micStreamRef.current = stream;
-
-      // Enable all audio tracks explicitly as microphone might be turned on we need to switch it on so actually sound can reach the other person
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = true;
-      });
-
-      if (localAudioRef.current) {
-        localAudioRef.current.srcObject = stream; // connecting the live stream to audio element so i can hear the sound actually
-      }
-
-      setIsMicOn(true);
-      console.log("Mic ON", stream);
-    }
-    // Case 2: Mic is ON → mute it
-    else {
-      const stream = micStreamRef.current;
-      if (!stream) return;
-
-      stream.getAudioTracks().forEach((track) => {
-        // keeping the mic turned on hardware level but switching it off so sound doesnt travel
-        track.enabled = false; // track is the actual thing where continous sound flows and stream is just a wrapper on it to support multiple source
-      });
-
-      setIsMicOn(false);
-      console.log("Mic OFF");
-    }
-  };
-
+  // -------------------------------- UI --------------------------------
   return (
     <>
       {/* way to access the audio element DOM using jsx , using this element we can listen to the track sound (for testing purpose only) */}
-      <audio ref={localAudioRef} autoPlay />
+      <audio ref={remoteAudioRef} autoPlay />
+
       <nav className="border-b">
         {/*---------------------------horizontal centering so items dont stretch to extreme ends ----------------------------------*/}
 
@@ -154,7 +233,7 @@ export default function RoomPage() {
           </div>
           {/*---------------------------Right flex item which is a flex itself to align items vertically----------------------------------*/}
           <div>
-            <p className="font-semibold">44:58</p>
+            <p className="font-semibold">{timeLeft}</p>
             <p className="text-sm text-black/60">Time Remaining</p>
           </div>
         </div>
