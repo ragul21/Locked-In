@@ -12,6 +12,7 @@ export default function RoomPage() {
   const [endTime, setEndTime] = useState(null);
   const [timeLeft, setTimeLeft] = useState("--:--");
 
+  const isAdminReference = useRef(false); // to store if a user is admin or not and to survive re render of the page as its a crucial data that should not be vanished
   const [isChatOpen, setIsChatOpen] = useState(false); // to toggle chat box
   const [chatInput, setChatInput] = useState(""); // to remember what user types in the input box
   const [messages, setMessages] = useState([]); // add what user typed in the box to the list and show the updated list has history
@@ -81,7 +82,7 @@ export default function RoomPage() {
     const socket = io("http://localhost:4000");
     socketRef.current = socket;
 
-    socket.on("connect", () => {
+    socket.on("connect", async () => {
       console.log("FRONTEND connected", socket.id);
       socket.emit("join-room", { roomId, username, endTime: endTimeFromModal });
 
@@ -104,6 +105,7 @@ export default function RoomPage() {
         };
 
         pc.onicecandidate = (event) => {
+          //ice candidate firing happens to help clients find each other
           if (event.candidate) {
             socket.emit("webrtc-ice-candidate", {
               roomId,
@@ -127,6 +129,10 @@ export default function RoomPage() {
     });
 
     socket.on("room-members", (membersFromServer) => {
+      const iam = membersFromServer.find((m) => m.id === socketRef.current?.id); // extract me from the member list
+      if (iam) {
+        isAdminReference.current = iam.role === "admin"; // if i am admin save the boolean for later use
+      }
       setMember(membersFromServer);
     });
 
@@ -170,29 +176,41 @@ export default function RoomPage() {
   const toggleMic = async () => {
     const pc = peerConnectionRef.current;
 
-    // Mic OFF → ON
+    // MIC OFF → ON
     if (!isMicOn) {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = stream;
+      // First time mic is turned ON
+      if (!micStreamRef.current) {
+        // get access to live mic hardware of a pc and ask permission to user
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        micStreamRef.current = stream; //save the mediastream reference we need this
 
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+        const audioTrack = stream.getAudioTracks()[0]; // this function returns an array of all audio tracks we need the first one
+        pc.addTrack(audioTrack, stream); // add these to RTC peer object
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+        //negotiate ONLY once (track added)
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-      socketRef.current.emit("webrtc-offer", {
-        roomId,
-        offer,
-      });
+        socketRef.current.emit("webrtc-offer", {
+          roomId,
+          offer,
+        });
+      } else {
+        // Mic already exists → just unmute
+        micStreamRef.current.getAudioTracks()[0].enabled = true; //if we have mic already then just unmute
+      }
 
       setIsMicOn(true);
     }
-    // Mic ON → OFF (stop sending only)
+
+    // MIC ON → OFF (mute only)
     else {
-      micStreamRef.current.getTracks().forEach((track) => track.stop());
-      micStreamRef.current = null;
+      if (micStreamRef.current) {
+        micStreamRef.current.getAudioTracks()[0].enabled = false; // just mute if toggled again
+      }
+
       setIsMicOn(false);
     }
   };
