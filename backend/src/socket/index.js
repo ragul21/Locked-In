@@ -33,9 +33,9 @@ export function initSocket(server) {
 
       {
         /* rooms[roomId] = {
-      members: [ { member }, { member } ],
-      messages: [ { message }, { message } ]
-} */
+                                                            members: [ { member }, { member } ],
+                                                            messages: [ { message }, { message } ]
+                                                      } */
       }
 
       const isAdmin = rooms[roomId].members.length === 0; // person creating the room will the admin as he is the first person
@@ -72,6 +72,9 @@ export function initSocket(server) {
       socket.emit("chat-history", rooms[roomId].messages); //one time display of chat history for new member who joined the room
     });
 
+    socket.on("screenshare-stopped", ({ roomId }) => {
+      socket.to(roomId).emit("screenshare-stopped");
+    });
     {
       /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
     }

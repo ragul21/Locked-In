@@ -19,11 +19,16 @@ export default function RoomPage() {
 
   const [shareUrl, setShareUrl] = useState(""); // to render and show the share URL after side effect runs in browser end
   const [isMicOn, setIsMicOn] = useState(false); // for mic state
+  const [hasScreenShare, setHasScreenShare] = useState(false); // to render screenshare
 
   const micStreamRef = useRef(null); // to save the stream object to pass it websockets
   const peerConnectionRef = useRef(null); // to store the reference of RTCpeerconnection object
   const socketRef = useRef(null);
-  const remoteAudioRef = useRef(null); // to hear other person voice
+  const remoteAudioRef = useRef(null); // to hear other person voice , we need to store audio dom element node in this
+  const remoteVideoRef = useRef(null); // to play the incoming vedio by attaching to vedio dom node
+  const screenStreamRef = useRef(null); // to save the vedio media stream object
+  const screenSenderRef = useRef(null); // to save the sender reference so we can remove it from the RTC peer pipe
+  const [videoKey, setVideoKey] = useState(0);
 
   const searchParams = useSearchParams();
   const params = useParams();
@@ -90,6 +95,31 @@ export default function RoomPage() {
         setEndTime(endTime);
       });
 
+      socket.on("screenshare-stopped", () => {
+        // 🎯 ADD THIS BLOCK - Stop all remote video tracks manually
+        if (peerConnectionRef.current) {
+          peerConnectionRef.current.getReceivers().forEach((receiver) => {
+            if (receiver.track && receiver.track.kind === "video") {
+              receiver.track.stop();
+            }
+          });
+        }
+
+        hardResetVideo();
+      });
+
+      function hardResetVideo() {
+        const video = remoteVideoRef.current;
+        if (video) {
+          video.pause();
+          video.srcObject = null;
+          video.load();
+        }
+
+        setHasScreenShare(false);
+        setVideoKey((k) => k + 1);
+      }
+
       //  CREATE PEER CONNECTION ONCE
       if (!peerConnectionRef.current) {
         const pc = new RTCPeerConnection({
@@ -98,10 +128,20 @@ export default function RoomPage() {
 
         peerConnectionRef.current = pc;
 
-        //  play remote audio
+        //  play remote vedio and  audio
         pc.ontrack = (event) => {
-          console.log("Remote audio received");
-          remoteAudioRef.current.srcObject = event.streams[0];
+          const track = event.track;
+          if (track.kind === "audio") {
+            console.log("Remote audio received");
+            remoteAudioRef.current.srcObject = event.streams[0]; // plug it to DOM nodes audio and vedio
+          }
+          if (track.kind === "video") {
+            remoteVideoRef.current.srcObject = event.streams[0];
+            setHasScreenShare(true);
+          }
+          track.onended = () => {
+            hardResetVideo();
+          };
         };
 
         pc.onicecandidate = (event) => {
@@ -214,6 +254,65 @@ export default function RoomPage() {
       setIsMicOn(false);
     }
   };
+  //-----------------------------------------screenshare  on/off ---------------------------///
+
+  const toggleScreenShare = async () => {
+    const pc = peerConnectionRef.current; //  we need to add tracks to the RTC pipe
+
+    if (!screenStreamRef.current) // if toggle initial stage off means do this
+    {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
+
+      screenStreamRef.current = screenStream;
+
+      const videoTrack = screenStreamRef.current.getVideoTracks()[0]; // get the vedio track alone from the media stream , we need the first index from the array
+
+      const sender = pc.addTrack(videoTrack, screenStream); //add the track and structure to RTC Pipe for SDP negotiation
+
+      screenSenderRef.current = sender; //remember this in a reference because we need to remove the sender to prevent frozen frames from peers
+
+      videoTrack.onended = async () =>
+        //if user clicks on stop sharing in browser level update our state to that screen share stopped
+        {
+          //even browser gives hard control to user on sharing and stopping irrespective of the app level UI , this is for security concerns
+          await stopScreenShare();
+        };
+
+      const offer = await pc.createOffer(); // now create the offer
+      await pc.setLocalDescription(offer); //commit the browser and ice gathering starts now
+
+      socketRef.current.emit("webrtc-offer", { roomId, offer }); // emit the offer to server , it sends to other people in the room
+    } else {
+      await stopScreenShare(); // if user toggled screenshare button again then stop it , we call the stopscreenshare helper function we defined
+    }
+
+    // -------------------------------- helper function to stop the screenshare --------------------------------//
+
+    async function stopScreenShare() {
+      const pc = peerConnectionRef.current; // get the RTCpeerconnection object reference we saved
+
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((t) => t.stop()); //stop the tracks
+        screenStreamRef.current = null;
+      }
+
+      if (screenSenderRef.current) {
+        pc.removeTrack(screenSenderRef.current); // remove the track from the RTC pipe to prevent ghost frames on peer screen
+        screenSenderRef.current = null; // reset this !!!
+      }
+
+      socketRef.current.emit("screenshare-stopped", { roomId });
+
+      setHasScreenShare(false);
+
+      const offer = await pc.createOffer(); // remote peer still have the old contract that vedio exsist so tell the user contract changed and no longer vedio exsist , this is to avoid clean design and ghost frames
+      await pc.setLocalDescription(offer);
+
+      socketRef.current.emit("webrtc-offer", { roomId, offer });
+    }
+  };
 
   //----------------------------- send chat -------------------//
   const sendMessage = () => {
@@ -227,6 +326,31 @@ export default function RoomPage() {
 
     setChatInput("");
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const video = remoteVideoRef.current;
+      const stream = video?.srcObject;
+
+      if (stream) {
+        const videoTracks = stream.getVideoTracks();
+
+        // If all video tracks are ended/stopped, clear the video
+        if (
+          videoTracks.length > 0 &&
+          videoTracks.every((t) => t.readyState === "ended")
+        ) {
+          console.log("🧹 Ghost frame detected - cleaning up");
+          video.srcObject = null;
+          video.load();
+          setHasScreenShare(false);
+          setVideoKey((k) => k + 1);
+        }
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (!username) {
     return <EnterNameModal onSubmit={setUsername} />;
@@ -265,12 +389,23 @@ export default function RoomPage() {
           <div className="col-span-8 ">
             {/* Screen Share / Video Area */}
             <div className="mb-6">
-              <div className="w-full aspect-video border rounded-lg bg-black/5 flex items-center justify-center">
-                <p className="text-sm text-black/40">
-                  Screen share will appear here
-                </p>
+              <div className="w-full aspect-video border rounded-lg bg-black/5 relative overflow-hidden">
+                <video
+                  key={videoKey}
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+
+                {!hasScreenShare && (
+                  <p className="absolute inset-0 flex items-center justify-center text-sm text-black/40">
+                    Screen share will appear here
+                  </p>
+                )}
               </div>
             </div>
+
             {/* other left section parts */}
 
             <div className="mb-6">
@@ -304,7 +439,10 @@ export default function RoomPage() {
                   <MicOff size={22} />
                 </button>
 
-                <button className="border p-4 rounded-lg hover:bg-black/5">
+                <button
+                  onClick={toggleScreenShare}
+                  className="border p-4 rounded-lg hover:bg-black/5"
+                >
                   <Monitor size={22} />
                 </button>
 
