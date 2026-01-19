@@ -95,8 +95,12 @@ export default function RoomPage() {
         setEndTime(endTime);
       });
 
+      /* ====================================================================================================== */
+
+      // ================================================================================
+      // Section: RECEIVING SENDER'S SCREENSHARE STOPPED EVENT , HANDLING IN RECEIVER END
+      // ================================================================================
       socket.on("screenshare-stopped", () => {
-        // 🎯 ADD THIS BLOCK - Stop all remote video tracks manually
         if (peerConnectionRef.current) {
           peerConnectionRef.current.getReceivers().forEach((receiver) => {
             if (receiver.track && receiver.track.kind === "video") {
@@ -120,6 +124,8 @@ export default function RoomPage() {
         setVideoKey((k) => k + 1);
       }
 
+      /* ====================================================================================================== */
+
       //  CREATE PEER CONNECTION ONCE
       if (!peerConnectionRef.current) {
         const pc = new RTCPeerConnection({
@@ -128,7 +134,9 @@ export default function RoomPage() {
 
         peerConnectionRef.current = pc;
 
-        //  play remote vedio and  audio
+        // ============================================================
+        // Section: ACTUAL VEDIO OR AUDIO PLAYING
+        // ============================================================
         pc.ontrack = (event) => {
           const track = event.track;
           if (track.kind === "audio") {
@@ -136,16 +144,19 @@ export default function RoomPage() {
             remoteAudioRef.current.srcObject = event.streams[0]; // plug it to DOM nodes audio and vedio
           }
           if (track.kind === "video") {
-            remoteVideoRef.current.srcObject = event.streams[0];
-            setHasScreenShare(true);
+            remoteVideoRef.current.srcObject = event.streams[0]; // plug it to DOM nodes audio and vedio
+            setHasScreenShare(true); //changing the UI from default as vedio started to play
           }
           track.onended = () => {
             hardResetVideo();
           };
         };
 
+        // =============================================================================
+        // Section: ICE CANDIDATES FIRING HAPPENING PARALLEL TO OFFER/ANSWER NEGOTIATION
+        // ==============================================================================
         pc.onicecandidate = (event) => {
-          //ice candidate firing happens to help clients find each other
+          //ice candidate firing happens to help clients find each other , goes via server
           if (event.candidate) {
             socket.emit("webrtc-ice-candidate", {
               roomId,
@@ -184,25 +195,44 @@ export default function RoomPage() {
       setMessages((prev) => [...prev, message]);
     });
 
+    // ============================================================
+    // Section: OFFER ACCEPTING CLIENT SIDE
+    // ============================================================
+
     socket.on("webrtc-offer", async ({ from, offer }) => {
       console.log("Received offer");
       const pc = peerConnectionRef.current;
 
+      /* RECEIVER ACCEPTS OFFER   */
       await pc.setRemoteDescription(offer);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
 
+      /*  RECEIVER CREATES ANSWER */
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer); /*Ice gathering starts */
+
+      /* SENDING THE ANSWER TO THE SENDER WHO SENT THE OFFER VIA SERVER */
       socket.emit("webrtc-answer", {
         to: from,
         answer,
       });
     });
 
+    // ============================================================
+    // Section: ANSWER ACCEPTING CLIENT SIDE
+    // ============================================================
+
     socket.on("webrtc-answer", async ({ answer }) => {
+      /* ACCEPTING THE ANSWER FROM CLIENT END , SDP NEGOTIATION COMPLETED  */
       await peerConnectionRef.current.setRemoteDescription(answer);
+
       console.log("Answer applied");
     });
 
+    // ============================================================
+    // Section: ICE CANDIDATES RECEIVING SECTION
+    // ============================================================
+
+    /* adds the network path candidate*/
     socket.on("webrtc-ice-candidate", async ({ candidate }) => {
       await peerConnectionRef.current.addIceCandidate(candidate);
     });
@@ -254,25 +284,39 @@ export default function RoomPage() {
       setIsMicOn(false);
     }
   };
-  //-----------------------------------------screenshare  on/off ---------------------------///
+
+  // ============================================================
+  // Section: Screen Share Toggle ON
+  // ============================================================
+
+  // toggling the screen share button will call this function
 
   const toggleScreenShare = async () => {
-    const pc = peerConnectionRef.current; //  we need to add tracks to the RTC pipe
+    // take the RTCpeerconnectionobject reference stored in the useRef of ours
+    const pc = peerConnectionRef.current;
 
-    if (!screenStreamRef.current) // if toggle initial stage off means do this
+    if (
+      !screenStreamRef.current
+    ) /* if this is false means , user is clicking the toggle for first time , initially we wont have the MediaStream object in our useRef variables , if true means screenshare is already on , so call the stop screenshare function*/
     {
+      // asking the browser for the live access of the user's screen display, this will return mediastream with vedio tracks
+      /* browser asks user permission to share the screen */
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
       });
 
+      //storing in the reference to our useRef
       screenStreamRef.current = screenStream;
 
-      const videoTrack = screenStreamRef.current.getVideoTracks()[0]; // get the vedio track alone from the media stream , we need the first index from the array
+      // extracting the vediotrack from the stream
+      const videoTrack = screenStreamRef.current.getVideoTracks()[0];
 
-      const sender = pc.addTrack(videoTrack, screenStream); //add the track and structure to RTC Pipe for SDP negotiation
+      /* put the vedio track into the webrtc pipe to flow to the receiver */
+      const sender = pc.addTrack(videoTrack, screenStream);
 
       screenSenderRef.current = sender; //remember this in a reference because we need to remove the sender to prevent frozen frames from peers
 
+      /* fires when user clicks stop sharing in the browser level */
       videoTrack.onended = async () =>
         //if user clicks on stop sharing in browser level update our state to that screen share stopped
         {
@@ -280,22 +324,31 @@ export default function RoomPage() {
           await stopScreenShare();
         };
 
-      const offer = await pc.createOffer(); // now create the offer
-      await pc.setLocalDescription(offer); //commit the browser and ice gathering starts now
+      // creating a sdp (session description protocol) , its like a contract about what i am going to send through RTCpipe to the peer
+      const offer = await pc.createOffer();
+
+      await pc.setLocalDescription(offer); // ice gathering starts now
 
       socketRef.current.emit("webrtc-offer", { roomId, offer }); // emit the offer to server , it sends to other people in the room
     } else {
       await stopScreenShare(); // if user toggled screenshare button again then stop it , we call the stopscreenshare helper function we defined
     }
 
-    // -------------------------------- helper function to stop the screenshare --------------------------------//
+    // ============================================================
+    // Section: Helper function to stop the screenshare
+    // ============================================================
 
     async function stopScreenShare() {
       const pc = peerConnectionRef.current; // get the RTCpeerconnection object reference we saved
 
+      /* STOP AND REMOVE THE TRACKS FROM THE STREAM AFTER SCREEN SHARE ENDED */
       if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach((t) => t.stop()); //stop the tracks
-        screenStreamRef.current = null;
+        screenStreamRef.current
+          .getTracks()
+          .forEach((t) =>
+            t.stop(),
+          ); /*stop the all the tracks in the stream , this stops the screen capture , this will change the track status from live to ended */
+        screenStreamRef.current = null; // remove the reference
       }
 
       if (screenSenderRef.current) {
@@ -303,14 +356,14 @@ export default function RoomPage() {
         screenSenderRef.current = null; // reset this !!!
       }
 
-      socketRef.current.emit("screenshare-stopped", { roomId });
+      socketRef.current.emit("screenshare-stopped", { roomId }); // NOTIFY OTHER PEERS IN THE ROOM THAT SCREENSHARE IS ENDED , VIA SERVER
 
-      setHasScreenShare(false);
+      setHasScreenShare(false); //UPDATE THE LOCAL UI TO DEFAULT (SCREEN SHARE WILL SHOW HERE)
 
-      const offer = await pc.createOffer(); // remote peer still have the old contract that vedio exsist so tell the user contract changed and no longer vedio exsist , this is to avoid clean design and ghost frames
+      const offer = await pc.createOffer(); // REMOTE PEER STILL HAVE THE OLD CONTRACT THAT VEDIO EXIST SO TELL THE USER CONTRACT CHANGED AND NO LONGER VEDIO EXSIST , THIS IS TO AVOID CLEAN DESIGN AND GHOST FRAMES
       await pc.setLocalDescription(offer);
 
-      socketRef.current.emit("webrtc-offer", { roomId, offer });
+      socketRef.current.emit("webrtc-offer", { roomId, offer }); //SENDING THE UPDATED NEW OFFER TO PEERS VIA THE SERVER
     }
   };
 
@@ -327,6 +380,10 @@ export default function RoomPage() {
     setChatInput("");
   };
 
+  // ============================================================================================
+  // Section: SAFETY NET FUNCTION RUNNING EVERY ONE SECOND TO DETECT ENDED FRAMES AND REMOVES THEM
+  // =============================================================================================
+
   useEffect(() => {
     const interval = setInterval(() => {
       const video = remoteVideoRef.current;
@@ -340,7 +397,6 @@ export default function RoomPage() {
           videoTracks.length > 0 &&
           videoTracks.every((t) => t.readyState === "ended")
         ) {
-          console.log("🧹 Ghost frame detected - cleaning up");
           video.srcObject = null;
           video.load();
           setHasScreenShare(false);
@@ -438,6 +494,8 @@ export default function RoomPage() {
                 >
                   <MicOff size={22} />
                 </button>
+
+                {/* clicking on the screenshare button will call toggle screen share function above */}
 
                 <button
                   onClick={toggleScreenShare}

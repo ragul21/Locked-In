@@ -73,7 +73,7 @@ export default function AuthModal({ mode, onClose }) {
     });
     const data = await response.json(); // this will take time as we have to read the stream and wait till we get all the chunks of text
     if (response.ok == false) {
-      setError(date.message); // fetch returns us the promise object with meta date fast but body will be still streaming from the source or buffered , this is how its designed
+      setError(data.message); // fetch returns us the promise object with meta date fast but body will be still streaming from the source or buffered , this is how its designed
       return;
     }
     localStorage.setItem("token", data.token);

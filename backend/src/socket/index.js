@@ -72,9 +72,13 @@ export function initSocket(server) {
       socket.emit("chat-history", rooms[roomId].messages); //one time display of chat history for new member who joined the room
     });
 
+    // ============================================================
+    // Section: HANDLING SENDER'S SCREENSHARE STOPPED EVENT
+    // ============================================================
     socket.on("screenshare-stopped", ({ roomId }) => {
-      socket.to(roomId).emit("screenshare-stopped");
+      socket.to(roomId).emit("screenshare-stopped"); //SEND TO EVERYONE IN THE ROOM EXCEPT SENDER THAT SCREENSHARE IS STOPPED
     });
+
     {
       /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
     }
@@ -89,32 +93,35 @@ export function initSocket(server) {
       io.to(roomId).emit("chat-message", message);
     });
 
-    {
-      /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
-    }
+    // ===========================================================================================
+    // Section: WEBRTC OFFER DEALING SERVER LOGIC
+    // =============================================================================================
 
-    //-----------when someone sends a webrtc offer send this offer to other people in the room-------------------//
+    /* when someone sends a webrtc offer send this offer to other people in the room */
 
     socket.on("webrtc-offer", ({ roomId, offer }) => {
       //socket.to(emit) - except me send to other
-      //io.to(emit) - send to everyone including me
+      //io.to(emit) - send to everyone including me                   /* goes to the receiver  */
       socket.to(roomId).emit("webrtc-offer", {
         from: socket.id,
         offer,
       });
     });
 
-    //----------------------replying to the answer , send this to client who sent the offer --------------------------------------------//
-
+    // ============================================================
+    // Section: ANSWER ROUTING TO CLIENT SIDE FROM SERVER
+    // ============================================================
     socket.on("webrtc-answer", ({ to, answer }) => {
-      // Send answer ONLY to the original offerer
+      // Send answer ONLY to the original offerer or sender , (to) ---> original sender's socket ID
       io.to(to).emit("webrtc-answer", {
         from: socket.id,
         answer,
       });
     });
 
-    //--------------------- handling the ice candidates received from the clients and forwarding it to others except the sender---------------------------------------------//
+    // ===========================================================================================================
+    // Section: HANDLING THE ICE CANDIDATES RECEIVED FROM THE CLIENTS AND FORWARDING IT TO OTHERS EXCEPT THE SENDER
+    // ============================================================================================================
 
     socket.on("webrtc-ice-candidate", ({ roomId, candidate }) => {
       socket.to(roomId).emit("webrtc-ice-candidate", {
