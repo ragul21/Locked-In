@@ -257,14 +257,14 @@ export default function RoomPage() {
         micStreamRef.current = stream; //save the mediastream reference we need this
 
         const audioTrack = stream.getAudioTracks()[0]; // this function returns an array of all audio tracks we need the first one
-        pc.addTrack(audioTrack, stream); // add these to RTC peer object
+        pc.addTrack(audioTrack, stream); // add these to RTC peer pipe , now it knows that it needs to send a audio data
 
         //negotiate ONLY once (track added)
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
         socketRef.current.emit("webrtc-offer", {
-          roomId,
+          /* sends this offer to receiver via server */ roomId,
           offer,
         });
       } else {

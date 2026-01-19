@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ["http://localhost:3000", "http://192.168.1.3:3000"],
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 module.exports = nextConfig;
