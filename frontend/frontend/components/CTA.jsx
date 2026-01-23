@@ -1,3 +1,7 @@
+// ============================================================================================
+//                                       CTA PAGE
+// ============================================================================================
+
 "use client";
 
 export default function CTA({ onCTAClick }) {
@@ -10,7 +14,7 @@ export default function CTA({ onCTAClick }) {
             Join teams that are shipping. Start your first session today.
           </p>
           <button
-            onClick={() => onCTAClick("signup")}
+            onClick={() => onCTAClick("signup")} //CHANGED THE STATE IN HOME PAGE SO RE RENDER HAPPENS WITH A SIGNUP MODAL
             className="bg-white text-black hover:bg-white/90 px-8 py-3 text-base font-semibold rounded transition-all duration-200"
           >
             Create Account

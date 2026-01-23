@@ -1,10 +1,14 @@
+// ============================================================================================
+//                                       FOOTER PAGE
+// ============================================================================================
+
 "use client";
 
 export default function Footer() {
   return (
     <footer className="bg-black text-white py-16">
       <div className="container mx-auto px-4">
-        {/* Four Column Grid */}
+        {/* Four Column Grid for medium screens and up and 1 column grid for mobile*/}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Column 1: Brand */}
           <div>
@@ -19,7 +23,7 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Column 2: Product Links */}
+          {/* Column 2: Product Links box , used a list */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Product</h4>
             <ul className="space-y-3 text-sm">
@@ -58,7 +62,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Company Links */}
+          {/* Column 3: Company Links box , used a list */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Company</h4>
             <ul className="space-y-3 text-sm">
@@ -97,7 +101,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 4: Contact */}
+          {/* Column 4: Contact box , used a list*/}
           <div>
             <h4 className="font-semibold mb-4 text-white">Contact</h4>
             <ul className="space-y-3">
@@ -129,7 +133,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Footer Bottom */}
+        {/* Footer Bottom used a flex row for medium screen and a column flex for mobile */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-white/60">
           <p>&copy; 2026 Locked In. All rights reserved.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
