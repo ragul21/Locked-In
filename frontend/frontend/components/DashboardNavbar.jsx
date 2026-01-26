@@ -10,9 +10,13 @@ export default function DashboardNavbar({ onCreateClick }) {
   /* To control the account button dropdown open and close i have made a state  */
   const [accountOpen, setAccountOpen] = useState(false);
 
-  /* ONCE USER CLICKS LOGOUT REMOVE THE TOKEN FROM THE WINDOWS */
-  function handleLogOut() {
-    localStorage.removeItem("token");
+  /* ONCE USER CLICKS LOGOUT, CALL BACKEND TO CLEAR COOKIE */
+  async function handleLogOut() {
+    await fetch("http://localhost:4000/auth/logout", {
+      method: "POST",
+      credentials: "include", // Send cookie so backend knows which one to clear
+    });
+
     window.location.href = "/";
   }
 

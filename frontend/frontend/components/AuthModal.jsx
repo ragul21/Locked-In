@@ -36,6 +36,7 @@ export default function AuthModal({ mode, onClose }) {
       const response = await fetch("http://localhost:4000/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }), //SENDING EMAIL AND PASSWORD IN THE LOGIN REQUEST AS THAT IS WHAT WE NEED
       });
 
@@ -47,7 +48,7 @@ export default function AuthModal({ mode, onClose }) {
         setError(data.message);
         return;
       }
-      localStorage.setItem("token", data.token);
+
       onClose();
       window.location.href = "/dashboard";
       return;
@@ -96,6 +97,7 @@ export default function AuthModal({ mode, onClose }) {
     const response = await fetch("http://localhost:4000/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         firstName,
         email,
@@ -115,7 +117,6 @@ export default function AuthModal({ mode, onClose }) {
       return;
     }
 
-    localStorage.setItem("token", data.token); //storing the token in localstorage of the browser that we got from the response
     onClose(); //closes the modal
     window.location.href = "/dashboard"; //takes me to the dashboard page with the token
   };

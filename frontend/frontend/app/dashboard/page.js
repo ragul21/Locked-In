@@ -15,14 +15,18 @@ export default function DashboardPage() {
 
   /* TOKEN CHECKING FOR DASHBOARD PAGE RUNS AFTER THE FIRST RENDER OF THE PAGE */
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const checkAuth = async () => {
+      // Instead of checking localStorage, ping the backend to verify cookie
+      const response = await fetch("http://localhost:4000/users/me", {
+        credentials: "include", // Send cookie automatically
+      });
 
-    /* if client does not have token redirect them to landing page ,
-     prevents users from accessing the dashboard page straight from url without logging in  */
+      if (response.status === 401) {
+        window.location.href = "/";
+      }
+    };
 
-    if (!token) {
-      window.location.href = "/";
-    }
+    checkAuth();
   }, []);
 
   //----------------------------MOCK DATA OBJECT THAT I PASSED TO THE ROOM CARD COMPONENT FOR RENDERING THE DASHBOARD ---------------------//

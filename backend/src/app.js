@@ -3,9 +3,16 @@ import authRoutes from "./routes/auth.route.js";
 import cors from "cors";
 import userRoutes from "./routes/user.route.js";
 import reviewRoutes from "./routes/review.routes.js";
-const app = express();
+import cookieParser from "cookie-parser";
 
-app.use(cors()); //FIRST MIDDLEWARE FUNCTION THAT ALLOWS CROSS ORIGIN COMMUNITION OTHERWISE BROWSER WILL BLOCK REACHING THE BACKEND
+const app = express();
+app.use(cookieParser()); //cookieParser() makes req.cookies available in all routes
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true, //in CORS allows browser to send/receive cookies cross-origin
+  }),
+); //FIRST MIDDLEWARE FUNCTION THAT ALLOWS CROSS ORIGIN COMMUNITION OTHERWISE BROWSER WILL BLOCK REACHING THE BACKEND
 app.use(express.json()); //THIS MIDDLEWARE WILL PARSE JSON STRING INTO JS OBJECT AND PUTS IN REQ.BODY
 
 app.use(

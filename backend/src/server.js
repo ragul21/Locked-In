@@ -1,6 +1,7 @@
 import app from "./app.js";
 import http from "http";
 import { initSocket } from "./socket/index.js";
+import cookieParser from "cookie-parser";
 
 const PORT = 4000;
 const server = http.createServer(app); //create a http server , if normal request comes in let app router handle

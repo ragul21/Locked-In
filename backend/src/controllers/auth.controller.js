@@ -24,8 +24,15 @@ export const signup = async (req, res) => {
   /* ONLY AFTER PASSING THE BACKEND INPUT VALIDATIONS WE ARE SENDING THE DATA TO THE SERVICE LAYER */
   /* CATCH WILL HANDLE IF DATA ALREADY EXSIST IN THE DATABASE CASES */
   try {
-    const user = await signUpUserService(result.data);
-    res.json(user); //TOKEN IS ATTACHED IN THE HEADER OF THE RESPONSE AND SENDS THE RESPONSE TO THE FRONTEND FETCH API
+    const { token } = await signUpUserService(result.data);
+    // SET TOKEN AS HTTP-ONLY COOKIE
+    res.cookie("token", token, {
+      httpOnly: true, // Can't be accessed by JavaScript
+      secure: process.env.NODE_ENV === "production", // Only HTTPS in production
+      sameSite: "strict", // CSRF protection
+      maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+    });
+    res.json({ message: "Sign up successful" });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -45,9 +52,27 @@ export const signin = async (req, res) => {
 
   /* ONCE ALL THE VALIDATION IS DONE , THEN WE PROCEED WITH THE SIGNINUSERSERVICE */
   try {
-    const user = await signInUserService(result.data); // CALLING THE SIGN IN SERVICE WITH THE RESULT DATA THAT IS THE INPUT WE GOT FROM THE USER
-    res.json(user);
+    const { token } = await signInUserService(result.data);
+
+    // SET TOKEN AS HTTP-ONLY COOKIE
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    res.json({ message: "Sign up successful" });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+};
+
+export const logout = async (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.json({ message: "Logged out successfully" });
 };

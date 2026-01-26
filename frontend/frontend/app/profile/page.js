@@ -18,21 +18,16 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-
-      /* if the user does not have the token redirect them to the homepage */
-      if (!token) {
-        window.location.href = "/";
-
-        return;
-      }
-
       const response = await fetch(
         "http://localhost:4000/users/me", // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
         {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include", // This automatically sends the cookie
         },
       );
+      if (response.status === 401) {
+        window.location.href = "/";
+        return;
+      }
       /* ONCE IT GETS THE DATA BACK WE EXTRACT THE BODY */
       const data = await response.json();
 
@@ -48,7 +43,7 @@ export default function Profile() {
     const token = localStorage.getItem("token");
     await fetch("http://localhost:4000/users/me", {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     });
 
     alert("user deleted");
@@ -64,8 +59,9 @@ export default function Profile() {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        credentials: "include",
       },
+
       body: JSON.stringify({
         firstName: editFirstName,
       }),
