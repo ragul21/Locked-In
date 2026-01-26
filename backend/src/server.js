@@ -1,9 +1,8 @@
 import app from "./app.js";
 import http from "http";
 import { initSocket } from "./socket/index.js";
-import cookieParser from "cookie-parser";
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 const server = http.createServer(app); //create a http server , if normal request comes in let app router handle
 initSocket(server); // hooks the socket io object manager to http server so it can intercept upgrade events (socket request to establish a persistent connection)
 server.listen(PORT, () => {

@@ -9,7 +9,7 @@ const app = express();
 app.use(cookieParser()); //cookieParser() makes req.cookies available in all routes
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true, //in CORS allows browser to send/receive cookies cross-origin
   }),
 ); //FIRST MIDDLEWARE FUNCTION THAT ALLOWS CROSS ORIGIN COMMUNITION OTHERWISE BROWSER WILL BLOCK REACHING THE BACKEND
