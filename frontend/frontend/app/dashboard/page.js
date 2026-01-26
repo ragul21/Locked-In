@@ -17,9 +17,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const checkAuth = async () => {
       // Instead of checking localStorage, ping the backend to verify cookie
-      const response = await fetch("http://localhost:4000/users/me", {
-        credentials: "include", // Send cookie automatically
-      });
+      const response = await fetch(
+        "https://locked-in-backend-yqx0.onrender.com/users/me",
+        {
+          credentials: "include", // Send cookie automatically
+        },
+      );
 
       if (response.status === 401) {
         window.location.href = "/";

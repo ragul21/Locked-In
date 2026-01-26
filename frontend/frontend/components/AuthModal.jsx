@@ -33,12 +33,15 @@ export default function AuthModal({ mode, onClose }) {
 
       /* SENDING AN FETCH RESPONSE TO THE LOGIN API OF BACKEND */
 
-      const response = await fetch("http://localhost:4000/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }), //SENDING EMAIL AND PASSWORD IN THE LOGIN REQUEST AS THAT IS WHAT WE NEED
-      });
+      const response = await fetch(
+        "https://locked-in-backend-yqx0.onrender.com/auth/signin",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }), //SENDING EMAIL AND PASSWORD IN THE LOGIN REQUEST AS THAT IS WHAT WE NEED
+        },
+      );
 
       // ----------------PAUSED UNTILL WE GET THE RESPONSE OBJECT , THEN BELOW WE READ THE BODY OF THE RESPONSE OBJECT ----------------//
 
@@ -94,16 +97,19 @@ export default function AuthModal({ mode, onClose }) {
 
     /* SENDS HTTP REQUEST TO THE BACKEND NODE JS SERVER WHICH IS LISTENING */
 
-    const response = await fetch("http://localhost:4000/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        firstName,
-        email,
-        password,
-      }),
-    });
+    const response = await fetch(
+      "https://locked-in-backend-yqx0.onrender.com/auth/signup",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          firstName,
+          email,
+          password,
+        }),
+      },
+    );
 
     // ----------------------------------WAITING FOR RESPONSE , FREEZED ! ----------------------------------------------------------------------------------------------------------------------------------------------------------------//
 

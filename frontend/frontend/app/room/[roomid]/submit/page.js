@@ -28,16 +28,19 @@ export default function SubmitPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:4000/api/demo-review", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const res = await fetch(
+        "https://locked-in-backend-yqx0.onrender.com/api/demo-review",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            githubLink,
+            designSummary: notes,
+          }),
         },
-        body: JSON.stringify({
-          githubLink,
-          designSummary: notes,
-        }),
-      });
+      );
 
       /* once i get the response i stringfy it and store it in the data variable  */
       const data = await res.json();

@@ -19,7 +19,7 @@ export default function Profile() {
   useEffect(() => {
     const fetchUser = async () => {
       const response = await fetch(
-        "http://localhost:4000/users/me", // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
+        "https://locked-in-backend-yqx0.onrender.com/users/me", // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
         {
           credentials: "include", // This automatically sends the cookie
         },
@@ -41,7 +41,7 @@ export default function Profile() {
 
   const handleDelete = async () => {
     const token = localStorage.getItem("token");
-    await fetch("http://localhost:4000/users/me", {
+    await fetch("https://locked-in-backend-yqx0.onrender.com/users/me", {
       method: "DELETE",
       credentials: "include",
     });
@@ -55,17 +55,20 @@ export default function Profile() {
 
   const handlesave = async () => {
     const token = localStorage.getItem("token");
-    const response = await fetch("http://localhost:4000/users/me", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        credentials: "include",
-      },
+    const response = await fetch(
+      "https://locked-in-backend-yqx0.onrender.com/users/me",
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          credentials: "include",
+        },
 
-      body: JSON.stringify({
-        firstName: editFirstName,
-      }),
-    });
+        body: JSON.stringify({
+          firstName: editFirstName,
+        }),
+      },
+    );
 
     const updateduser = await response.json();
     setUser(updateduser);

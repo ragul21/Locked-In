@@ -120,7 +120,7 @@ export default function RoomPage() {
     );
 
     /* MAKES A SOCKET CONNECTION TO THE BACKEND SERVER (PERSISTENT CONNECTION ESTABLISHED) */
-    const socket = io("http://localhost:4000");
+    const socket = io("https://locked-in-backend-yqx0.onrender.com");
     socketRef.current = socket; // WE GET THE SOCKET ID REFERENCE AND WE SAVE IT
 
     socket.on("connect", async () => {

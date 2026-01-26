@@ -12,7 +12,7 @@ export default function DashboardNavbar({ onCreateClick }) {
 
   /* ONCE USER CLICKS LOGOUT, CALL BACKEND TO CLEAR COOKIE */
   async function handleLogOut() {
-    await fetch("http://localhost:4000/auth/logout", {
+    await fetch("https://locked-in-backend-yqx0.onrender.com/auth/logout", {
       method: "POST",
       credentials: "include", // Send cookie so backend knows which one to clear
     });
