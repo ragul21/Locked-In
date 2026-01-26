@@ -59,9 +59,9 @@ export default function Profile() {
       "https://locked-in-backend-yqx0.onrender.com/users/me",
       {
         method: "PUT",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          credentials: "include",
         },
 
         body: JSON.stringify({
