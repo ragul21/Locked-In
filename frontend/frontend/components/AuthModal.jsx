@@ -18,23 +18,28 @@ export default function AuthModal({ mode, onClose }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  //----------------------HANDLING THE SUBMIT BUTTON--------------------------------------------------------------------//
+  //-------------------------------------------HANDLING THE SUBMIT BUTTON FOR BOTH LOGIN AND SIGN UP--------------------------------------------------------------------//
 
   const handleSubmitButton = async () => {
+    /* BASIC VALIDATIONS IN THE UI , MAKING SURE USER GIVES ALL THE INPUT NEEDED FOR THE LOGIN MODAL */
     if (mode === "login") {
-      //this is for login
+      //IF ANY ONE OF IT IS MISSING SHOW THE ERROR STATE IN THE UI PAGE
       if (!email || !password) {
         setError("Please fill all fields");
         return;
       }
 
-      setError("");
+      setError(""); // CLEAR ANY PREVIOUS ERROR RESPONSE
+
+      /* SENDING AN FETCH RESPONSE TO THE LOGIN API OF BACKEND */
 
       const response = await fetch("http://localhost:4000/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password }), //SENDING EMAIL AND PASSWORD IN THE LOGIN REQUEST AS THAT IS WHAT WE NEED
       });
+
+      // ----------------PAUSED UNTILL WE GET THE RESPONSE OBJECT , THEN BELOW WE READ THE BODY OF THE RESPONSE OBJECT ----------------//
 
       const data = await response.json(); // getting the body out of response , which might be still streaming from source so i used await here
 
@@ -48,51 +53,71 @@ export default function AuthModal({ mode, onClose }) {
       return;
     }
 
-    //this is for signup
+    // ------------------------- SIGN UP BUTTON HANDLING AND VALIDATIONS ------------------------/
+
+    /* THIS BLOCK WILL RUN WHEN SIGN UP BUTTON TOGGLED */
+
+    /* This below if condition is responsible for ensuring user filled all the fields of the modal */
+
     if (!firstName || !email || !password) {
       setError("please fill all the fields");
 
       return;
     }
-    {
-      /* basic frontend validation check to notify the user */
-    }
+
+    /* Below are the basic validations for inputs  */
+    /* For email we are ensuring @ and . exsist and no spaces for the email */
     const trimmed_email = email.trim();
     if (
       !email.includes("@") ||
       !email.includes(".") ||
       trimmed_email.includes(" ")
     ) {
-      setError("please enter valid email ");
+      setError("please enter valid email "); // if the email validation fails call the set error
       return;
     }
+
+    /* This below if is for password validation , if the password length is lesser than 6
+    call the error state */
 
     if (password.length < 6) {
       setError("Password must be atleast 6 characters long");
       return;
     }
 
-    setError("");
+    setError(""); // to clear the previous error response
+
+    //-------------------------------validation part over---------------------------------------------------------//
+
+    //-------------FETCH HAPPENS POST CLICKING THE SUBMIT BUTTON -------------------------------------------------//
+
+    /* SENDS HTTP REQUEST TO THE BACKEND NODE JS SERVER WHICH IS LISTENING */
 
     const response = await fetch("http://localhost:4000/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        // we check the fetch response if its ok == true we allow user to go to dashboard
-        //if not we stop and show the error message inline
         firstName,
         email,
         password,
       }),
     });
+
+    // ----------------------------------WAITING FOR RESPONSE , FREEZED ! ----------------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+    //----------------------------------BELOW WONT RUN UNTILL WE GET THE RESPONSE FROM THE BACKEND AS ITS A TIME TAKING FUNCTION WHICH IS ASYNCHRONOUS BY NATURE---------------------------------------------------------------------------//
+
     const data = await response.json(); // this will take time as we have to read the stream and wait till we get all the chunks of text
+    /* once we got all the stream of text in body , it will converted into a js object and we extract the value from the promise */
+    // fetch returns us the promise object with meta date fast but body will be still streaming from the source or buffered , this is how its designed
     if (response.ok == false) {
-      setError(data.message); // fetch returns us the promise object with meta date fast but body will be still streaming from the source or buffered , this is how its designed
+      setError(data.message);
       return;
     }
-    localStorage.setItem("token", data.token);
-    onClose();
-    window.location.href = "/dashboard";
+
+    localStorage.setItem("token", data.token); //storing the token in localstorage of the browser that we got from the response
+    onClose(); //closes the modal
+    window.location.href = "/dashboard"; //takes me to the dashboard page with the token
   };
 
   // ----------------------------------------UI RENDERING -----------------------------------------//
@@ -170,6 +195,8 @@ export default function AuthModal({ mode, onClose }) {
           </div>
         </div>
         {/* -------------------------------------------------------------------- */}
+        {/* This below is the error message that will display at the
+        bottom of the modal if the user missed any fields,below the password block  */}
         {error && <p className="text-red-600 text-sm mt - 2 ">{error}</p>}{" "}
         {/* conditional rendering for inline error */}
         {/*button rendering based on login or signup*/}

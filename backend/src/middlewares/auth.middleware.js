@@ -1,3 +1,7 @@
+// ============================================================================================
+//                                        THIS CHECKS WHETHER TOKEN IS VALID OR NOT
+// ============================================================================================
+
 import jwt from "jsonwebtoken";
 
 export const tokenChecker = (req, res, next) => {
@@ -7,6 +11,7 @@ export const tokenChecker = (req, res, next) => {
     res.status(401).json({ message: "unauthorized" }); // if there is no token in header means unauthorized
   }
 
+  /* take the token alone from the string */
   const tokenRaw = tokenFromReq.split(" ")[1]; // taking the first index which will have the jwt token
 
   if (!tokenRaw) {
@@ -15,7 +20,7 @@ export const tokenChecker = (req, res, next) => {
 
   try {
     const payload = jwt.verify(tokenRaw, process.env.JWT_SECRET); // creates a signture from the payload and secret , compares it with the received token signature , if same returns a decoded payload object
-    req.user = { userId: payload.userId };
+    req.user = { userId: payload.userId }; //payload will have the user id ,using that we can pull the data from DB and show to people
     next();
   } catch (error) {
     res.status(401).json({ message: "user unauthorized" });

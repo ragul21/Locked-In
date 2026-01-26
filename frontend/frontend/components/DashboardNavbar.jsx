@@ -1,18 +1,28 @@
+// ============================================================================================
+//                                        NAVBAR OF THE DASHBOARD
+// ============================================================================================
+
 "use client";
 
 import { useState } from "react";
 
 export default function DashboardNavbar({ onCreateClick }) {
+  /* To control the account button dropdown open and close i have made a state  */
   const [accountOpen, setAccountOpen] = useState(false);
+
+  /* ONCE USER CLICKS LOGOUT REMOVE THE TOKEN FROM THE WINDOWS */
   function handleLogOut() {
     localStorage.removeItem("token");
     window.location.href = "/";
   }
 
+  /* ONCE USER CLICKS PROFILE , PROFILE PAGE SHOULD POP UP AND THIS DOES THE WORK */
+
   function HandleProfile() {
     window.location.href = "/profile";
   }
 
+  // ----------------------------------------------UI RENDERING------------------------------//
   return (
     <nav className="border-b h-16">
       <div className="container mx-auto h-full px-4">
@@ -23,7 +33,7 @@ export default function DashboardNavbar({ onCreateClick }) {
             </div>
             <span className="font-semibold">Locked In</span>
           </div>
-
+          {/* IN BETWEEN SEARCH BAR SHOULD FILL THE ENTIRE SPACE BETWEEN THE LEFT AND RIGHT BUTTONS */}
           <div className="flex-1 px-8">
             <input
               type="text"
@@ -31,7 +41,7 @@ export default function DashboardNavbar({ onCreateClick }) {
               className="w-full border px-3 py-2"
             />
           </div>
-
+          {/* CREATE ROOM AND ACCOUNT BUTTON GOES INTO A SINGLE FLEX CONTAINER */}
           <div className="relative flex items-center gap-4">
             <button
               onClick={onCreateClick}
@@ -47,6 +57,7 @@ export default function DashboardNavbar({ onCreateClick }) {
               Account
             </button>
 
+            {/* CONDITIONAL RENDERING OF THE DROP DOWN AFTER CLICKING ON THE ACCOUNT */}
             {accountOpen && (
               <>
                 <div

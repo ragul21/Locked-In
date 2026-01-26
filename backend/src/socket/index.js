@@ -1,5 +1,22 @@
 import { Server } from "socket.io";
 
+//SERVER LEVEL DATA STRUCTURE TO REMEMBER ROOM ID AND THERE RELATED MEMBER LIST DATA AND CHAT HISTORY
+/* const rooms = {
+  "room-304309603380219": {
+    members: [
+      { id: "abc123", name: "Ragul", role: "admin" },
+      { id: "def456", name: "GGG", role: "member" }
+    ],
+    messages: [
+      { text: "Hello!", from: "Ragul" },
+      { text: "Hi there", from: "GGG" }
+    ],
+    startTime: 1737878598000, // milliseconds
+    endTime: 1737884598000,   // milliseconds
+    status: "ACTIVE"
+  }
+  // ... other rooms
+} */
 const rooms = {};
 
 export function initSocket(server) {
@@ -17,9 +34,14 @@ export function initSocket(server) {
     console.log(" Socket connected:", socket.id);
 
     socket.on("join-room", ({ roomId, username, endTime }) => {
-      //
+      //BELOW IS THE SOCKET.IO INTERNAL MAPPING WHICH HAS SOCKET ID AND THE ROOM ID KEY VALUE PAIRS
       socket.join(roomId); // internally creates array for that room id and store the socket id
 
+      // ============================================================================================
+      //        THIS IS A SERVER LEVEL MEMORY OF THE MEMBER AND CHAT HISTORY LIST
+      // ============================================================================================
+
+      /* Initialize if the internal room object is empty */
       if (!rooms[roomId]) {
         // application level memory of who joined and there data
         rooms[roomId] = {
@@ -31,14 +53,20 @@ export function initSocket(server) {
         };
       }
 
-      {
-        /* rooms[roomId] = {
-                                                            members: [ { member }, { member } ],
-                                                            messages: [ { message }, { message } ]
-                                                      } */
-      }
-
       const isAdmin = rooms[roomId].members.length === 0; // person creating the room will the admin as he is the first person
+
+      /* PUSH THE EMITTED MEMBER INTO THE SERVER LEVEL STUCTURE */
+      rooms[roomId].members.push({
+        //push into memmbers
+        id: socket.id,
+        name: username,
+        role: isAdmin ? "admin" : "member",
+      });
+
+      // NOW rooms object looks like:
+      // rooms["room-304309603380219"].members = [
+      //   { id: "abc123", name: "Ragul", role: "admin" }
+      // ]
 
       if (isAdmin && !rooms[roomId].startTime && endTime) {
         // after end time emit all members room ended
@@ -50,17 +78,10 @@ export function initSocket(server) {
         setTimeout(() => {
           if (rooms[roomId]?.status === "ACTIVE") {
             rooms[roomId].status = "ENDED";
-            io.to(roomId).emit("room-ended");
+            io.to(roomId).emit("room-ended"); // after room ends send all people in the room to the submit page
           }
         }, delay);
       }
-
-      rooms[roomId].members.push({
-        //push into memmbers
-        id: socket.id,
-        name: username,
-        role: isAdmin ? "admin" : "member",
-      });
 
       socket.emit("room-time", {
         endTime: rooms[roomId].endTime,
@@ -68,6 +89,7 @@ export function initSocket(server) {
 
       console.log(`${socket.id} joined room ${roomId}`);
 
+      /* TO ALL THE MEMBERS OF THE ROOM WE SEND THEM THE UPDATED LIST AND CHATHISTORY */
       io.to(roomId).emit("room-members", rooms[roomId].members); // to all the socket id in this particular room send the member list
       socket.emit("chat-history", rooms[roomId].messages); //one time display of chat history for new member who joined the room
     });
@@ -79,13 +101,16 @@ export function initSocket(server) {
       socket.to(roomId).emit("screenshare-stopped"); //SEND TO EVERYONE IN THE ROOM EXCEPT SENDER THAT SCREENSHARE IS STOPPED
     });
 
-    {
-      /* when user client sends the text to server , i will send that text and who sent it to all the sockets (clients) in this room */
-    }
+    // ============================================================
+    // IF USER SEND CHAT RECEIVE IT !!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // ============================================================
 
+    /* HANDLES THE SINGLE CHAT MESSAGE USER SENDS AND SENDS IT TO ALL THE OTHER MEMBERS OF THE ROOM */
     socket.on("chat-message", ({ roomId, username, text }) => {
       console.log("Message received:", text);
 
+      /* TAKE THE MESSAGE AND USERNAME FROM THE REQUEST ATTACH IT THE INTERNAL DATA STRUCTURE 
+      AND EMIT TO ALL THE OTHER MEMBER'S OF THE ROOM */
       const message = { text, from: username };
 
       rooms[roomId].messages.push(message);

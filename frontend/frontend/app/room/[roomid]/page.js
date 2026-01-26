@@ -1,16 +1,25 @@
+// ============================================================================================
+//                                        ROOM PAGE UI
+// ============================================================================================
+
 "use client";
+
 import { io } from "socket.io-client";
 import { useParams, useSearchParams } from "next/navigation";
 import { MicOff, MessageSquare, Monitor, LogOut } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import EnterNameModal from "@/components/EnterNameModal";
 import { useRouter } from "next/navigation";
+
 export default function RoomPage() {
   const router = useRouter(); // to push submission page after timer ends
-  const [username, setUsername] = useState(null);
-  const [members, setMember] = useState([]);
-  const [endTime, setEndTime] = useState(null);
-  const [timeLeft, setTimeLeft] = useState("--:--");
+
+  /* THESE BELOW STATES ARE TO SAVE THE DATA THAT WE GET THROUGH THE URL */
+  const [username, setUsername] = useState(null); //HOLDS THE USER NAME
+  const [members, setMember] = useState([]); //WILL HOLD THE MEMBER LIST ARRAY WHICH WE GET FROM THE BACKEND
+  const [endTime, setEndTime] = useState(null); //WILL HOLD THE ENDTIME FROM THE BACKEND
+  const [timeLeft, setTimeLeft] = useState("--:--"); //WILL HOLD THE PRESENT TIME
+  //---------------------------------------------------------------------//
 
   const isAdminReference = useRef(false); // to store if a user is admin or not and to survive re render of the page as its a crucial data that should not be vanished
   const [isChatOpen, setIsChatOpen] = useState(false); // to toggle chat box
@@ -30,8 +39,15 @@ export default function RoomPage() {
   const screenSenderRef = useRef(null); // to save the sender reference so we can remove it from the RTC peer pipe
   const [videoKey, setVideoKey] = useState(0);
 
-  const searchParams = useSearchParams();
-  const params = useParams();
+  //--------------------------------------------------------------------------------------//
+
+  /* HOOKS TO EXTRACT PATH PARAMETERS AND QUERY PARAMETERS */
+
+  /* SEARCH PARAMETERS READS EVERYTHING AFTER ?  */
+  const searchParams = useSearchParams(); // to extract the path parameters
+
+  /* USE PARAMS READ THE DYNAMIC ROUTE PATH IN THE FOLDER STRUCTURE */
+  const params = useParams(); // to extract the query parameters
 
   /* ------------------------------url data extraction -------------------*/
   const roomId = params.roomid;
@@ -44,6 +60,13 @@ export default function RoomPage() {
     ? new Date(endTimeParam).getTime() // convert the data into milliseconds (js understands miliseconds)
     : null;
 
+  // =================================================================================================
+  //                                       EFFECT 1
+  //                 THIS EFFECT SETS THE INTERVAL FOR THE COUNTDOWN TIMER FOR THE ROOM
+  //                  (THIS WONT RUN UNTILL IT GETS THE END TIME FROM THE BACKEND SERVER)
+  // =================================================================================================
+
+  /* ONCE WE GET THE END TIME FROM BACKEND SOCKET BELOW EFFECT RUNS  */
   useEffect(() => {
     if (!endTime) return;
 
@@ -57,7 +80,7 @@ export default function RoomPage() {
       }
 
       const minutes = Math.floor(diff / 60000); // millisecond to minutes calculation
-      const seconds = Math.floor((diff % 60000) / 1000); // millisecond to minutes calculation
+      const seconds = Math.floor((diff % 60000) / 1000); // millisecond to seconds calculation
 
       setTimeLeft(
         `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
@@ -67,6 +90,12 @@ export default function RoomPage() {
     return () => clearInterval(interval);
   }, [endTime]);
 
+  // ================================================================================================================================
+  //                                       EFFECT 2
+  // RUNS AFTER THE FIRST RENDER , WE STORE THE STORED USER NAME IN USERNAME WHICH SHOWS US THE FIRST UI
+  // CONTRIBUTES TO BOTH CASES WHERE USER JOINS THROUGH THE ENTER NAME MODAL INVITE URL AS WELL AS THE CREATE ROOM BUTTON
+  // ===============================================================================================================================
+
   useEffect(() => {
     const storedUsername = sessionStorage.getItem("username");
 
@@ -75,8 +104,14 @@ export default function RoomPage() {
     }
   }, [username]);
 
+  // ==================================================================================================================================
+  //                                               EFFECT 3
+  //    THIS EFFECT DOES THE JOB OF DOING A SOCKET CONNECTION AS WE NEED A PERSISTENT CONNECTION FOR LIVE STUFFS
+  //    WE WONT MAKE A CONNECTION UNTILL WE GET THE USERNAME
+  // ==================================================================================================================================
+
   useEffect(() => {
-    if (!roomId || !username) return;
+    if (!roomId || !username) return; // without user name we should never make a socket connection , roomid for being extra cautious sometimes states wont properly initialize
 
     setShareUrl(
       `${window.location.origin}/room/${roomId}?name=${encodeURIComponent(
@@ -84,11 +119,14 @@ export default function RoomPage() {
       )}&desc=${encodeURIComponent(description || "")}`,
     );
 
+    /* MAKES A SOCKET CONNECTION TO THE BACKEND SERVER (PERSISTENT CONNECTION ESTABLISHED) */
     const socket = io("http://localhost:4000");
-    socketRef.current = socket;
+    socketRef.current = socket; // WE GET THE SOCKET ID REFERENCE AND WE SAVE IT
 
     socket.on("connect", async () => {
       console.log("FRONTEND connected", socket.id);
+
+      /*MAKE A EMIT TO JOIN THE ROOM TO BACKEND */
       socket.emit("join-room", { roomId, username, endTime: endTimeFromModal });
 
       socket.on("room-time", ({ endTime }) => {
@@ -126,7 +164,7 @@ export default function RoomPage() {
 
       /* ====================================================================================================== */
 
-      //  CREATE PEER CONNECTION ONCE
+      //  CREATE PEER CONNECTION ONCE WHEN A USER COMES INTO ROOM PAGE AND STORE IT IN THE PEERCONNECTION REFERENCE TO SURVIVE RENDERS
       if (!peerConnectionRef.current) {
         const pc = new RTCPeerConnection({
           iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -179,6 +217,7 @@ export default function RoomPage() {
       console.log("FRONTEND disconnected");
     });
 
+    /* THIS WILL GET THE MEMBER LIST FROM THE SERVER  */
     socket.on("room-members", (membersFromServer) => {
       const iam = membersFromServer.find((m) => m.id === socketRef.current?.id); // extract me from the member list
       if (iam) {
@@ -187,12 +226,17 @@ export default function RoomPage() {
       setMember(membersFromServer);
     });
 
+    /* THIS WILL GET THE CHAT HISTORY LIST FROM THE SERVER  */
+
     socket.on("chat-history", (history) => {
       setMessages(history);
     });
 
+    // ============================================================
+    // RECEIVE THE CHAT HISTORY THAT IS SENT FROM THE SERVER
+    // ============================================================
     socket.on("chat-message", (message) => {
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => [...prev, message]); // ADDS NEW MESSAGE TO THE EXSISTING ARRAY, UI RE RENDERS TO SHOW THE UPDATED OUTPUT
     });
 
     // ============================================================
@@ -248,20 +292,32 @@ export default function RoomPage() {
 
     // MIC OFF → ON
     if (!isMicOn) {
-      // First time mic is turned ON
+      // First time mic is turned ON and get the stream reference if this is the first time
       if (!micStreamRef.current) {
         // get access to live mic hardware of a pc and ask permission to user
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
         micStreamRef.current = stream; //save the mediastream reference we need this
-
+        /* GET THE AUDIO STREAM TRACKS OUT OF THIS STREAM */
         const audioTrack = stream.getAudioTracks()[0]; // this function returns an array of all audio tracks we need the first one
+
+        //this creates a RTCRtp sender object
         pc.addTrack(audioTrack, stream); // add these to RTC peer pipe , now it knows that it needs to send a audio data
 
-        //negotiate ONLY once (track added)
+        //negotiate ONLY once (track added) creates an sdp
+        // SDP is like a contract that says:
+        // "Hey peer, I want to send you:
+        //  - Audio (opus codec at 48kHz)
+        //  - Using these encryption keys
+        //  - On this network path
+        //  - With these settings"
         const offer = await pc.createOffer();
+
+        /* STARTS THE ICE GATHERING  */
         await pc.setLocalDescription(offer);
+
+        /*THIS IS CLIENT SENDING OFFER TO THE PEERS , THIS GOES THROUGH THE SERVER */
 
         socketRef.current.emit("webrtc-offer", {
           /* sends this offer to receiver via server */ roomId,
@@ -367,22 +423,29 @@ export default function RoomPage() {
     }
   };
 
-  //----------------------------- send chat -------------------//
+  /* THIS BELOW IS FOR THE INDIVIDUAL CHAT MESSAGE THAT WILL BE EMITTED WHEN USER CLICKS SEND */
+
   const sendMessage = () => {
     if (!chatInput.trim()) return;
 
+    /* roomId: "room-304309603380219",
+      username: "Ragul",
+      text: "Hello!" */
     socketRef.current.emit("chat-message", {
       roomId,
       username,
       text: chatInput,
     });
 
-    setChatInput("");
+    setChatInput(""); //CLEAR THE INPUT BOX
   };
+  // =================================================================================================================
+  //                                       EFFECT 4
+  // =================================================================================================================
 
-  // ============================================================================================
+  // =================================================================================================================
   // Section: SAFETY NET FUNCTION RUNNING EVERY ONE SECOND TO DETECT ENDED FRAMES AND REMOVES THEM
-  // =============================================================================================
+  // ==================================================================================================================
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -408,11 +471,17 @@ export default function RoomPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // =================================================================================================================
+  //                                        THIS IS THE FIRST RENDER THAT IS HAPPENING , WE WONT HAVE
+  // =================================================================================================================
+
+  /* PASSING THE SETUSER NAME STATE TO THE ENTER NAME MODAL FOR PEOPLE WHO ARE JOINING THROUGH THE SHARE URL */
+  /* INITIALLY THIS IS FALSE SO WE GET THIS RENDER FOR SPLIT SECOND WHO JOINED THROUGH CREATE ROOM  */
   if (!username) {
     return <EnterNameModal onSubmit={setUsername} />;
   }
 
-  // -------------------------------- UI --------------------------------
+  // -------------------------------- MAIN ROOM UI ------------------------------------------------------------/
   return (
     <>
       {/* way to access the audio element DOM using jsx , using this element we can listen to the track sound (for testing purpose only) */}
@@ -462,7 +531,7 @@ export default function RoomPage() {
               </div>
             </div>
 
-            {/* other left section parts */}
+            {/* SHARE ROOM URL AND COPY BLOCK WE USE A SIMPLE FLEX WITH FLEX 1 */}
 
             <div className="mb-6">
               <h2 className="text-sm font-semibold">Share Room</h2>
@@ -470,7 +539,7 @@ export default function RoomPage() {
                 <input
                   type="text"
                   readOnly
-                  value={shareUrl}
+                  value={shareUrl} // we are showing the value of the share URL state we just created above
                   className="flex-1 border rounded px-3 py-2 text-sm bg-black/5"
                 />
                 <button
@@ -481,13 +550,15 @@ export default function RoomPage() {
                 </button>
               </div>
             </div>
-            {/* controls */}
+
+            {/* ROOM CONTROL BLOCKS */}
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-4">Controls</h3>
 
               <div className="flex items-center justify-center gap-6">
                 <button
                   onClick={toggleMic}
+                  /* conditional color changing of the mic based on toggle */
                   className={`border p-4 rounded-lg hover:bg-black/5 ${
                     isMicOn ? "bg-black text-white" : ""
                   }`}
@@ -505,6 +576,7 @@ export default function RoomPage() {
                 </button>
 
                 <button
+                  /* below state will pull up the chat modal at the bottom */
                   onClick={() => setIsChatOpen(true)}
                   className="border p-4 rounded-lg hover:bg-black/5"
                 >
@@ -515,12 +587,13 @@ export default function RoomPage() {
 
                 {isChatOpen && (
                   <div className="fixed bottom-6 right-6 w-80 h-96 border rounded-lg bg-white shadow-lg flex flex-col">
-                    {/* Header */}
+                    {/* CHAT BOX UI IS GOING TO BE A FLEX COLUMN MODAL */}
+                    {/* chat Header */}
                     <div className="border-b px-4 py-2 font-semibold flex justify-between items-center">
                       <span>Chat</span>
                       <button
                         className="text-black/60 hover:text-black"
-                        onClick={() => setIsChatOpen(false)}
+                        onClick={() => setIsChatOpen(false)} //CLOSES THE CHAT MODEL WHEN CANCEL BUTTON IS CLICKED
                       >
                         ✕
                       </button>
@@ -528,9 +601,13 @@ export default function RoomPage() {
 
                     {/* Messages */}
                     <div className="flex-1 p-3 overflow-y-auto space-y-2">
+                      {/* WE GET MESSAGE HISTORY IN AN ARRAY WHEN ANYONE MESSAGES */}
+                      {/* IF ITS EMPTY WE CONDITIONALLY RENDER THE MESSAGE BOX */}
                       {messages.length === 0 && (
                         <p className="text-black/40 text-sm">No messages yet</p>
                       )}
+
+                      {/* WHEN WE GET A MESSAGE HISTORY ARRAY WE HAVE TO LOOP IT USING A MAP FUNCTION AND DISPLAY IT */}
 
                       {messages.map((msg, index) => (
                         <div
@@ -543,7 +620,7 @@ export default function RoomPage() {
                       ))}
                     </div>
 
-                    {/* Input */}
+                    {/* A TYPICAL STATE BASED INPUT BOX TO REMEMBER THE VALUE THAT I ACTUALLY HAVE TO SEND TO SERVER */}
                     <div className="border-t p-2 flex gap-2">
                       <input
                         type="text"
@@ -561,7 +638,8 @@ export default function RoomPage() {
                     </div>
                   </div>
                 )}
-                {/* conditional rendering of chat window if someone toggles the chat window */}
+
+                {/* BELOW IS THE LOGOUT BUTTON THAT RE DIRECTS US TO THE DASHBOARD AFTER ITS CLICKED */}
 
                 <button
                   onClick={() => {
@@ -601,7 +679,7 @@ export default function RoomPage() {
             </div>
           </div>
 
-          {/* VERTICAL DIVIDER */}
+          {/* VERTICAL DIVIDER W-PX CREATES A VERTICAL DIVIDER */}
           <div className="col-span-1 flex justify-center">
             <div className="w-px bg-black/10 h-full" />
           </div>
@@ -609,6 +687,7 @@ export default function RoomPage() {
           {/* RIGHT SECTION */}
           <div className="col-span-3">
             <div className="pl-6">
+              {/* ALSO WE GET THE MEMBER'S ARRAY UPDATED EVERYTIME SO WE CAN DYNAMICALLY SHOW THE LENGTH */}
               <h3 className="font-semibold mb-4">Members ({members.length})</h3>
 
               <div className="space-y-3">
@@ -618,6 +697,7 @@ export default function RoomPage() {
                     className="flex items-center gap-3 border rounded-lg p-3"
                   >
                     <div className="w-9 h-9 rounded-md bg-black text-white flex items-center justify-center font-semibold">
+                      {/* SHOWS THE NAME AVATAR OF THE MEMBER, WE ARE JUST USING THE FIRST INDEX*/}
                       {member.name[0]}
                     </div>
 

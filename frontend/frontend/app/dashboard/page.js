@@ -1,3 +1,7 @@
+// ============================================================================================
+//                                        DASHBOARD PAGE
+// ============================================================================================
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,19 +10,22 @@ import MyRoomCard from "@/components/MyRoomCard";
 import CreateRoomModal from "@/components/CreateRoomModal";
 
 export default function DashboardPage() {
+  // -------------STATE TO HANDLE THE CREATE ROOM MODAL WHEN USER CLICKS--------------------//
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
 
+  /* TOKEN CHECKING FOR DASHBOARD PAGE RUNS AFTER THE FIRST RENDER OF THE PAGE */
   useEffect(() => {
     const token = localStorage.getItem("token");
 
+    /* if client does not have token redirect them to landing page ,
+     prevents users from accessing the dashboard page straight from url without logging in  */
+
     if (!token) {
-      {
-        /* if client does not have token redirect them to landing page ,
-                                                         prevents users from accessing the dashboard page straight from url without logging in  */
-      }
       window.location.href = "/";
     }
   }, []);
+
+  //----------------------------MOCK DATA OBJECT THAT I PASSED TO THE ROOM CARD COMPONENT FOR RENDERING THE DASHBOARD ---------------------//
 
   const myRoom = {
     name: "Design Sprint",
@@ -70,6 +77,7 @@ export default function DashboardPage() {
     tags: ["Design", "Frontend"],
   };
 
+  //---------------------------------UI RENDERING---------------------------------------------//
   return (
     <>
       <DashboardNavbar onCreateClick={() => setIsCreateRoomOpen(true)} />
@@ -97,13 +105,17 @@ export default function DashboardPage() {
         </section>
       </main>
 
+      {/*-------------------- CONDITIONAL RENDERING OF THE CREATE ROOM MODAL----------------------- */}
       {isCreateRoomOpen && (
         <CreateRoomModal
-          onClose={() => setIsCreateRoomOpen(false)}
+          onClose={() => setIsCreateRoomOpen(false)} //TO CLOSE THE MODAL IF USER CLICKS OUTSIDE OR X Button
+          /* WHEN USER CLICKS CREATE , TAKE THE OBJECT DATA SEND IT TO THE ROOM PAGE THROUGH URL AS QUERY PARAMETERS */
           onCreate={(room) => {
-            setIsCreateRoomOpen(false); //create room data is passed as query parameters by safely encoding it
-            sessionStorage.setItem("username", room.username);
+            setIsCreateRoomOpen(false); //CLOSE THE MODAL AFTER USER CLICKS ON CREATE
 
+            sessionStorage.setItem("username", room.username); //STORE IT IN THE BROWSER AS ITS SENSITIVE
+
+            /* OBJECT DATA IS SENT THROUGH THE URL  */
             window.location.href = `/room/${room.id}?name=${encodeURIComponent(
               room.name,
             )}&desc=${encodeURIComponent(room.description)}&end=${encodeURIComponent(room.endTime)}`;

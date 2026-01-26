@@ -1,9 +1,15 @@
+// ============================================================================================
+//                                        THIS IS THE PROFILE PAGE
+// ============================================================================================
+
 "use client";
+
 import { useState, useEffect } from "react";
 
 import ProfileNavbar from "@/components/ProfileNavbar";
 
 export default function Profile() {
+  /* ----------------------------------STATES TO MANAGE FOR EDITING USER NAME AND SHOWING USER DATE IN THE UI-------------------- */
   const [user, setUser] = useState(null);
   const [isEditMode, setEditMode] = useState(false);
   const [editFirstName, setEditFirstName] = useState("");
@@ -14,11 +20,10 @@ export default function Profile() {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
 
+      /* if the user does not have the token redirect them to the homepage */
       if (!token) {
         window.location.href = "/";
-        {
-          /* prevent user from accessing the page directly*/
-        }
+
         return;
       }
 
@@ -26,17 +31,18 @@ export default function Profile() {
         "http://localhost:4000/users/me", // page renders with null data but then after render we have use effect that runs once and it fetches then triggers render again and now the values pop up in the screen
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
-
+      /* ONCE IT GETS THE DATA BACK WE EXTRACT THE BODY */
       const data = await response.json();
-      setUser(data);
+
+      setUser(data); // WE UPDATE THE STATE TO RENDER IT IN THE PAGE
     };
 
     fetchUser();
   }, []);
 
-  //------------------------------------------------------------------------------------//
+  //----------------------------THIS HANDLES THE DELETE BUTTON THIS WILL DO DELETE REQUEST TO THE BACKEND AND FORCE THE USER TO THE DASHBOARD--------------------------------------------------------//
 
   const handleDelete = async () => {
     const token = localStorage.getItem("token");
@@ -50,7 +56,7 @@ export default function Profile() {
     window.location.href = "/";
   };
 
-  //------------------------------------------------------------------------------------//
+  //-------------------------------IF USER CLICKS SAVE TO DB USING POST-----------------------------------------------------//
 
   const handlesave = async () => {
     const token = localStorage.getItem("token");
@@ -70,11 +76,11 @@ export default function Profile() {
     setEditMode(false);
   };
 
-  //--------------------------------//
+  //----------------UNTILL WE GET THE USER DATA FROM THE BACKEND SHOW LOADING PAGE AND WAIT----------------//
   if (!user) {
     return <p className="text-center mt-10">Loading profile...</p>;
   }
-  //----------------render-----------------------------------//
+  //----------------ONCE WE GET ACTUAL DATA FROM DB THIS BLOCK WILL RUN AND ABOVE WONT-----------------------------------//
   return (
     <>
       <ProfileNavbar />
@@ -86,7 +92,7 @@ export default function Profile() {
               <div className="w-24 h-24 rounded-full bg-black/10 flex items-center justify-center">
                 {/* profile photo later */}
               </div>
-
+              {/* WHEN USER CLICKS EDIT BUTTON , WE CONDITIONALLY RENDER AND SHOW THE INPUT FEILD */}
               {isEditMode ? (
                 <input
                   className="text-2xl font-bold border px-2 py-1"
@@ -98,7 +104,8 @@ export default function Profile() {
               )}
 
               <p className="text-sm text-black/60">
-                Joined {new Date(user.createdAt).toLocaleDateString()}
+                Joined {new Date(user.createdAt).toLocaleDateString()}{" "}
+                {/* WE TAKE THE CREATED AT FROM DB TO DISPLAY JOINED DATE HERE */}
               </p>
             </div>
             <hr className="my-8" />
