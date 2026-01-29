@@ -4,5 +4,6 @@ Locked In is a real time room based application , where users join timed room se
 
 ## High Level Architecture Overview
 
+![High-level architecture](./docs/architecture.png)
 
 
